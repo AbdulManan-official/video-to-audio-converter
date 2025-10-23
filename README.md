@@ -141,6 +141,4 @@ Abdul Manan
 📍 Sialkot, Pakistan
 📧 abdullmanan7777@gmail.com
 
-💼 LinkedIn
 
-🏷️ Crafted with ❤️ by Unitech Forge — “Crafting Smart Tech & Creative Solutions.”
