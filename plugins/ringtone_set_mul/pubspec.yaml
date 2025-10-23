@@ -1,0 +1,13 @@
+name: ringtone_set_mul
+description: A Flutter plugin to set ringtones on Android.
+version: 0.0.4
+homepage: https://pub.dev/packages/ringtone_set_mul
+environment:
+  sdk: ">=2.17.0 <4.0.0"
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: acr.rt.ringtone_set_mul
+        pluginClass: RingtoneSetMulPlugin

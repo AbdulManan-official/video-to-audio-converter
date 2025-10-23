@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Merge Audio Files</title>
+    <script src="https://cdn.jsdelivr.net/npm/crunker@latest"></script>
+</head>
+<body>
+    <script>
+        function mergeAudio(base64File1, base64File2, callback) {
+            const crunker = new Crunker();
+
+            // Convert base64 to audio buffers
+            const arrayBuffer1 = new Uint8Array(atob(base64File1).split("").map(c => c.charCodeAt(0))).buffer;
+            const arrayBuffer2 = new Uint8Array(atob(base64File2).split("").map(c => c.charCodeAt(0))).buffer;
+
+            crunker.mergeAudio([arrayBuffer1, arrayBuffer2])
+                .then(merged => crunker.export(merged, 'audio/mp3'))
+                .then(output => {
+                    const url = URL.createObjectURL(output.blob);
+                    callback(url);  // Send back the URL of the merged audio
+                })
+                .catch(error => {
+                    console.error("Error merging audio:", error);
+                });
+        }
+    </script>
+</body>
+</html>

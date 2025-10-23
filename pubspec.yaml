@@ -1,0 +1,72 @@
+name: video_to_audio_converter
+description: "A new Flutter project."
+publish_to: 'none'
+
+version: 1.0.2+5
+environment:
+
+  sdk: '>=3.4.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # State management
+  get: ^4.7.2
+  # Audio & Video video_player: ^2.10.0 video_thumbnail: ^0.5.6
+  just_audio: ^0.10.5
+  video_player: ^2.10.0
+  video_thumbnail: ^0.5.6
+  ffmpeg_kit_flutter_new: ^3.2.0
+#  ffmpeg_kit_flutter_new: ^3.2.0-min-gpl
+
+  # Device / System info
+  path_provider: ^2.1.5
+  path: ^1.9.1
+  device_info_plus: ^12.1.0
+  shared_preferences: ^2.5.3
+  connectivity_plus: ^7.0.0
+  # Utilities
+  fluttertoast: ^9.0.0
+  share_plus: ^12.0.0
+  ringtone_set_mul:
+    path: ./plugins/ringtone_set_mul
+  # Network / API
+  dio: ^5.9.0
+  http: ^0.13.6
+  http_parser: ^4.1.2
+  flutter_downloader: ^1.12.0
+  # Ads
+  google_mobile_ads: ^5.3.1
+
+  # UI Effects
+  shimmer: ^3.0.0
+
+  # Permissions
+  permission_handler: ^12.0.1
+  google_fonts: ^4.0.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+
+flutter_launcher_icons:
+  android: true
+  image_path: "assets/images/video.png"
+  min_sdk_android: 21
+  adaptive_icon_foreground: "assets/images/video.png"
+
+flutter_native_splash:
+  android: true
+  ios: true
+  color: "#FFFFFF"
+  image: "assets/images/video.png"
+  android_gravity: center
+  ios_content_mode: scaleAspectFit
+  web: true
