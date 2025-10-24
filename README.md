@@ -47,7 +47,7 @@ UI	Material Design, Custom Widgets
 Platform	Android (SDK 21+)
 ⚙️ Setup & Installation
 1. Clone the Repository
-git clone https://github.com/yourusername/video-to-audio-converter.git
+git clone https://github.com/AbdulManan-official/video-to-audio-converter
 cd video-to-audio-converter
 
 2. Install Dependencies
