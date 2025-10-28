@@ -152,10 +152,16 @@ class FolderVideoListScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Videos in ${path.basename(folderName)}'),
-        backgroundColor: Colors.deepPurple,
+        title: Text(
+          'Videos in ${path.basename(folderName)}',
+          style: Theme.of(context).appBarTheme.titleTextStyle,
+        ),
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        iconTheme: Theme.of(context).appBarTheme.iconTheme,
       ),
-      body: ListView.builder(
+
+      // body: ...
+    body: ListView.builder(
         itemCount: videos.length,
         itemBuilder: (context, index) {
           final video = videos[index];
@@ -206,9 +212,14 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Playing Video'),
-        backgroundColor: Colors.deepPurple,
+        title: Text(
+          'Playing Video',
+          style: Theme.of(context).appBarTheme.titleTextStyle,
+        ),
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        iconTheme: Theme.of(context).appBarTheme.iconTheme,
       ),
+
       body: Center(
         child: _controller.value.isInitialized
             ? AspectRatio(

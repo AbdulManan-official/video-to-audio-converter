@@ -32,13 +32,14 @@ class _ConversionProgressPageState extends State<ConversionProgressPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text(
+        iconTheme: Theme.of(context).appBarTheme.iconTheme,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        title: Text(
           'Conversion Progress',
-          style: TextStyle(color: Colors.white),
+          style: Theme.of(context).appBarTheme.titleTextStyle,
         ),
-        backgroundColor: primaryColor,
       ),
+
       body: Obx(() {
         return Column(
           children: [

@@ -13,28 +13,7 @@ class ConversionController extends GetxController {
   RxBool isLoading = false.obs;
   String fileName = ""; // Add a default file name
 
-  // Request storage permissions
-  // Future<bool> requestPermissions() async {
-  //   try {
-  //     DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
-  //     AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
-  //     int sdkInt = androidInfo.version.sdkInt;
 
-  //     if (sdkInt >= 30) {
-  //       // SAF requires folder picker; permissions aren't enough
-  //       log('Requesting folder access for Android 13+');
-  //       var permissions = await [Permission.manageExternalStorage].request();
-  //       return permissions[Permission.manageExternalStorage]!.isGranted;
-  //     } else {
-  //       // For SDK below 30, request storage permission
-  //       var permissions = await [Permission.storage].request();
-  //       return permissions[Permission.storage]!.isGranted;
-  //     }
-  //   } catch (e) {
-  //     log('Error requesting permissions: $e');
-  //     return false;
-  //   }
-  // }
 
   // Method to convert video to audio using platform channels
   Future<void> convertVideoToAudio(String videoPath, String fileName) async {

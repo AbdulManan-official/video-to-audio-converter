@@ -1,5 +1,4 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:path/path.dart' as path;
@@ -12,8 +11,11 @@ class VideoListScreen extends StatelessWidget {
   final List<File> videosInFolder;
   final String folderName;
 
-  const VideoListScreen(
-      {super.key, required this.videosInFolder, required this.folderName});
+  const VideoListScreen({
+    super.key,
+    required this.videosInFolder,
+    required this.folderName,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -21,12 +23,11 @@ class VideoListScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: Text(
-          "Videos in ${path.basename(folderName)}",
-          style: const TextStyle(color: Colors.white),
-        ),
-        backgroundColor: primaryColor,
+        title: Text("Videos in ${path.basename(folderName)}"),
+        // Theme from main.dart automatically applies:
+        // - centered title
+        // - bold white text
+        // - consistent color (secondaryColor or primaryColor)
       ),
       body: ListView.builder(
         itemCount: videosInFolder.length,
@@ -36,8 +37,7 @@ class VideoListScreen extends StatelessWidget {
 
           return ListTile(
             leading: FutureBuilder<String?>(
-              future: videoController.generateThumbnail(
-                  videoFile.path), // Load thumbnail asynchronously
+              future: videoController.generateThumbnail(videoFile.path),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return Shimmer.fromColors(
@@ -48,16 +48,16 @@ class VideoListScreen extends StatelessWidget {
                       height: 250,
                       color: Colors.white,
                     ),
-                  ); // Show a loading indicator while the thumbnail is being generated
+                  );
                 } else if (snapshot.hasData) {
                   return Image.file(
-                      height: 250,
-                      width: 150,
-                      fit: BoxFit.cover,
-                      File(snapshot
-                          .data!)); // Show the thumbnail once it's loaded
+                    File(snapshot.data!),
+                    height: 250,
+                    width: 150,
+                    fit: BoxFit.cover,
+                  );
                 } else {
-                  return const Icon(Icons.videocam); // Fallback if no thumbnail
+                  return const Icon(Icons.videocam);
                 }
               },
             ),
@@ -66,17 +66,20 @@ class VideoListScreen extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               maxLines: 1,
               style: const TextStyle(
-                  fontSize: 15,
-                  color: Colors.black,
-                  fontWeight: FontWeight.bold),
+                fontSize: 15,
+                color: Colors.black,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             subtitle: Text(
               '$mbSize MB',
               style: const TextStyle(fontWeight: FontWeight.w400),
             ),
             onTap: () {
-              Get.to(() => VideoPlayerScreen(videoPath: videoFile.path),
-                  transition: Transition.fade); // Navigate to video player
+              Get.to(
+                    () => VideoPlayerScreen(videoPath: videoFile.path),
+                transition: Transition.fade,
+              );
             },
           ).paddingSymmetric(vertical: 6);
         },
@@ -102,7 +105,6 @@ class _VideoDetailsScreenState extends State<VideoDetailsScreen> {
   @override
   void initState() {
     super.initState();
-    // Initialize file name from video file
     fileName = path.basenameWithoutExtension(widget.videoFile.path);
   }
 
@@ -117,7 +119,6 @@ class _VideoDetailsScreenState extends State<VideoDetailsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Video player placeholder
             Container(
               height: 200,
               color: Colors.black,
@@ -127,7 +128,6 @@ class _VideoDetailsScreenState extends State<VideoDetailsScreen> {
             ),
             const SizedBox(height: 20),
 
-            // File Name input
             const Text("File Name"),
             TextFormField(
               initialValue: fileName,
@@ -140,14 +140,11 @@ class _VideoDetailsScreenState extends State<VideoDetailsScreen> {
                 border: OutlineInputBorder(),
               ),
             ),
-
             const SizedBox(height: 20),
 
-            // Format and Bitrate dropdowns
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Format
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -155,12 +152,11 @@ class _VideoDetailsScreenState extends State<VideoDetailsScreen> {
                     DropdownButton<String>(
                       value: selectedFormat,
                       items: <String>['MP3(Fast)', 'WAV', 'AAC']
-                          .map((String value) {
-                        return DropdownMenuItem<String>(
-                          value: value,
-                          child: Text(value),
-                        );
-                      }).toList(),
+                          .map((String value) => DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(value),
+                      ))
+                          .toList(),
                       onChanged: (String? newValue) {
                         setState(() {
                           selectedFormat = newValue!;
@@ -169,8 +165,6 @@ class _VideoDetailsScreenState extends State<VideoDetailsScreen> {
                     ),
                   ],
                 ),
-
-                // Bitrate
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -178,12 +172,11 @@ class _VideoDetailsScreenState extends State<VideoDetailsScreen> {
                     DropdownButton<String>(
                       value: selectedBitrate,
                       items: <String>['128kb/s', '256kb/s', '320kb/s']
-                          .map((String value) {
-                        return DropdownMenuItem<String>(
-                          value: value,
-                          child: Text(value),
-                        );
-                      }).toList(),
+                          .map((String value) => DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(value),
+                      ))
+                          .toList(),
                       onChanged: (String? newValue) {
                         setState(() {
                           selectedBitrate = newValue!;
@@ -194,41 +187,30 @@ class _VideoDetailsScreenState extends State<VideoDetailsScreen> {
                 ),
               ],
             ),
-
             const SizedBox(height: 20),
 
-            // Trim and Edit Tag buttons
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 ElevatedButton(
-                  onPressed: () {
-                    // Implement Trim functionality
-                    print("Trim pressed");
-                  },
+                  onPressed: () => print("Trim pressed"),
                   child: const Text("TRIM"),
                 ),
                 ElevatedButton(
-                  onPressed: () {
-                    // Implement Edit Tag functionality
-                    print("Edit Tag pressed");
-                  },
+                  onPressed: () => print("Edit Tag pressed"),
                   child: const Text("EDIT TAG"),
                 ),
               ],
             ),
-
             const SizedBox(height: 20),
 
-            // Extract Audio button
             Center(
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   padding:
-                      const EdgeInsets.symmetric(vertical: 14, horizontal: 50),
+                  const EdgeInsets.symmetric(vertical: 14, horizontal: 50),
                 ),
                 onPressed: () {
-                  // Call extraction method here
                   print("Extracting audio from ${widget.videoFile.path}");
                 },
                 child: const Text("EXTRACT AUDIO"),

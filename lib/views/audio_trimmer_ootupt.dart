@@ -82,12 +82,14 @@ class _OutputScreenTrimmerViewState extends State<OutputScreenTrimmerView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: primaryColor,
-        title: const Text(
+        title: Text(
           'Converted MP3 Files',
-          style: TextStyle(color: Colors.white),
+          style: Theme.of(context).appBarTheme.titleTextStyle,
         ),
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        iconTheme: Theme.of(context).appBarTheme.iconTheme,
       ),
+
       body: mp3Files.isEmpty
           ? const Center(child: Text('No MP3 files found.'))
           : ListView.builder(

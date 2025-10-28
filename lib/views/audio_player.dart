@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:video_to_audio_converter/utils/resources.dart';
+import 'package:video_to_audio_converter/utils/utils.dart';
 
 class MusicPlayerScreen extends StatefulWidget {
   final String audiopath;
@@ -124,28 +125,26 @@ class _MusicPlayerScreenState extends State<MusicPlayerScreen>
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
-        backgroundColor: Colors.black,
-        title: Row(
-          children: [
-            Expanded(
-              child: Text(
-                fileName,
-                style: const TextStyle(color: Colors.white, fontSize: 22),
-              ),
-            ),
-          ],
+        title: Text(
+          fileName,
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+          overflow: TextOverflow.ellipsis,
         ),
+        centerTitle: true,
         leading: IconButton(
           icon: const Icon(
             Icons.arrow_back,
-            size: 30,
+            size: 26,
             color: Colors.white,
           ),
-          onPressed: () {
-            Navigator.pop(context);
-          },
+          onPressed: () => Navigator.pop(context),
         ),
       ),
+
       body: Stack(
         children: [
           AnimatedOpacity(

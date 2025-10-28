@@ -31,13 +31,14 @@ class _MergeAudioScreenState extends State<MergeAudioScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        iconTheme: const IconThemeData(color: Colors.white),
-        backgroundColor: primaryColor,
-        title: const Text(
+        title: Text(
           "Recent Added",
-          style: TextStyle(color: Colors.white, fontSize: 20),
+          style: Theme.of(context).appBarTheme.titleTextStyle,
         ),
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        iconTheme: Theme.of(context).appBarTheme.iconTheme,
       ),
+
       body: Obx(() {
         if (controller.isLoading.value) {
           return const Center(child: CircularProgressIndicator());

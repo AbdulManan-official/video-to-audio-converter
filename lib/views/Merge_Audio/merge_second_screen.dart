@@ -82,13 +82,14 @@ class _MergeScreenState extends State<MergeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        iconTheme: const IconThemeData(color: Colors.white),
-        backgroundColor: primaryColor,
         title: Text(
           "${files.length} files to be merged",
-          style: const TextStyle(color: Colors.white),
+          style: Theme.of(context).appBarTheme.titleTextStyle,
         ),
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        iconTheme: Theme.of(context).appBarTheme.iconTheme,
       ),
+
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: Obx(
             () => ElevatedButton(
@@ -126,7 +127,7 @@ class _MergeScreenState extends State<MergeScreen> {
           )
               : const Text(
             "Merge",
-            style: TextStyle(color: Colors.white),
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
           ),
         ).paddingSymmetric(horizontal: 10),
       ),

@@ -44,10 +44,12 @@ class VideoView extends StatelessWidget {
             color: Colors.white,
           ),
         ),
-        backgroundColor: primaryColor,
-        title: const Text(
-          'Recent Videos',
-          style: TextStyle(color: Colors.white, fontSize: 20),
+        backgroundColor: secondaryColor,
+        title: Center(
+          child: const Text(
+            'Recent Videos',
+            style: TextStyle(color: Colors.white, fontSize: 20,fontWeight: FontWeight.bold),
+          ),
         ),
       ),
       body: Obx(() {

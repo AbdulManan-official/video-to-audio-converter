@@ -47,21 +47,18 @@ class _AudioSavedScreenState extends State<AudioSavedScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        iconTheme: const IconThemeData(color: Colors.white),
-        backgroundColor: primaryColor,
-        title: const Text(
-          'Audio Saved',
-          style: TextStyle(color: Colors.white),
-        ),
+        title: const Text('Audio Saved'), // main.dart theme will handle color + style
+        centerTitle: true, // optional if not already globally set
         actions: [
           IconButton(
             icon: const Icon(Icons.home),
             onPressed: () {
-              Get.offAll(() => HomeScreen()); // Navigate back using GetX
+              Get.offAll(() => HomeScreen());
             },
           ),
         ],
       ),
+
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

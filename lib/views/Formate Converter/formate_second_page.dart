@@ -90,13 +90,14 @@ class _FormateSecondPageState extends State<FormateSecondPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        iconTheme: const IconThemeData(color: Colors.white),
-        backgroundColor: primaryColor,
+        iconTheme: Theme.of(context).appBarTheme.iconTheme,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         title: Text(
-          "${files.length} files to be fromated",
-          style: const TextStyle(color: Colors.white),
+          "${files.length} files to be formatted",
+          style: Theme.of(context).appBarTheme.titleTextStyle,
         ),
       ),
+
       body: Column(
         children: [
           Expanded(

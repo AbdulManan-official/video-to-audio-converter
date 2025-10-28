@@ -27,11 +27,11 @@ class _FormateMainState extends State<FormateMain> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        iconTheme: const IconThemeData(color: Colors.white),
-        backgroundColor: primaryColor,
-        title: const Text(
+        iconTheme: Theme.of(context).appBarTheme.iconTheme,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        title: Text(
           "Recent Added",
-          style: TextStyle(color: Colors.white, fontSize: 20),
+          style: Theme.of(context).appBarTheme.titleTextStyle,
         ),
         actions: [
           IconButton(
@@ -46,6 +46,7 @@ class _FormateMainState extends State<FormateMain> {
           ),
         ],
       ),
+
       body: Obx(() {
         if (controller.isLoading.value) {
           return const Center(child: CircularProgressIndicator());

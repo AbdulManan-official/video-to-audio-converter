@@ -77,16 +77,36 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GetMaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'Video to Audio Converter',
       theme: ThemeData(
-        bottomSheetTheme:
-        const BottomSheetThemeData(dragHandleColor: Colors.white),
+        scaffoldBackgroundColor: const Color(0xFFF5F5F5),
+        primaryColor: secondaryColor,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: secondaryColor,
+          centerTitle: true, // ✅ centers all AppBar titles
+          titleTextStyle: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold, // ✅ makes it bold
+            fontSize: 20,
+          ),
+          iconTheme: IconThemeData(color: Colors.white),
+        ),
+
+
+        // Background & Text
+        // scaffoldBackgroundColor: Color(0xFFF2F2F2), // Softer background
         textTheme: GoogleFonts.poppinsTextTheme(),
-        scaffoldBackgroundColor: Colors.white,
-        appBarTheme: const AppBarTheme(backgroundColor: Colors.white),
+
+        // BottomSheet Theme
+        bottomSheetTheme: const BottomSheetThemeData(
+          backgroundColor: Colors.white,
+          dragHandleColor: Colors.grey,
+        ),
       ),
       home: HomeScreen(),
     );
+
   }
 }
 
@@ -217,33 +237,36 @@ class _OutputScreenState extends State<OutputScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back,
-            size: 30,
-            color: Colors.white,
-          ),
-          onPressed: () {
-            Get.offAll(() => HomeScreen());
-          },
-        ),
-        backgroundColor: primaryColor,
-        title: const Text(
+
+        iconTheme: Theme.of(context).appBarTheme.iconTheme,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        title: Text(
           'OutPut Folder',
-          style: TextStyle(color: Colors.white),
+          style: Theme.of(context).appBarTheme.titleTextStyle,
         ),
         bottom: TabBar(
-          dividerColor: Colors.white,
-          unselectedLabelColor: Colors.grey,
-          labelColor: Colors.white,
           controller: _tabController,
-          tabs: const [
-            Tab(text: "Video Music"),
-            Tab(text: "Merged Audio"),
-            Tab(text: "Formate Converter Audio"),
-          ],
+          indicatorColor: Colors.black,           // active tab indicator
+          labelColor: Colors.black,               // active tab text
+          unselectedLabelColor: Colors.white,     // inactive tab text
+          labelStyle: const TextStyle(
+            fontWeight: FontWeight.w500,          // bold active tab
+            fontSize: 16,
+          ),
+          unselectedLabelStyle: const TextStyle(
+            fontWeight: FontWeight.w400,          // slightly less bold inactive tab
+            fontSize: 16,
+          ),
+
+            tabs: const [
+              Tab(text: "Audios"),
+              Tab(text: "Merged "),
+              Tab(text: "Converted"),
+            ],
+
         ),
       ),
+
       body: TabBarView(
         controller: _tabController,
         children: [

@@ -41,24 +41,14 @@ class _SetRingtonePageState extends State<SetRingtonePage>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        iconTheme: const IconThemeData(color: Colors.white),
-        backgroundColor: primaryColor,
-        title: const Text(
+        iconTheme: Theme.of(context).appBarTheme.iconTheme,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        title: Text(
           "Set Ringtone",
-          style: TextStyle(color: Colors.white),
+          style: Theme.of(context).appBarTheme.titleTextStyle,
         ),
-        // bottom: TabBar(
-        //   labelColor: Colors.white,
-        //   unselectedLabelColor: Colors.grey,
-        //   controller: _tabController,
-        //   tabs: const [
-        //     Tab(
-        //       text: "SONGS",
-        //     ),
-        //     Tab(text: "OTHERS"),
-        //   ],
-        // ),
       ),
+
       body: const Center(child: SetRingtoneButtonWidget()),
 
       //  TabBarView(
@@ -130,7 +120,7 @@ class _SetRingtoneButtonWidgetState extends State<SetRingtoneButtonWidget>
                         spreadRadius: 2,
                       ),
                     ],
-                    color: primaryColor,
+                    color: secondaryColor,
                     borderRadius: BorderRadius.circular(14)),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
@@ -193,7 +183,7 @@ class _SetRingtoneButtonWidgetState extends State<SetRingtoneButtonWidget>
                                 children: [
                                   Icon(
                                     Icons.person_add_alt_1,
-                                    color: primaryColor,
+                                    color: Colors.black,
                                   ),
                                   SizedBox(
                                     width: 10,
@@ -201,7 +191,7 @@ class _SetRingtoneButtonWidgetState extends State<SetRingtoneButtonWidget>
                                   Text(
                                     'Set Ringtone',
                                     style: TextStyle(
-                                        color: primaryColor,
+                                        color: Colors.black,
                                         fontWeight: FontWeight.bold),
                                   )
                                 ],
@@ -353,24 +343,32 @@ class _SongsTabState extends State<SongsTab>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        iconTheme: const IconThemeData(color: Colors.white),
-        backgroundColor: primaryColor,
-        title: const Text(
+        iconTheme: Theme.of(context).appBarTheme.iconTheme,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        title: Text(
           "Set Ringtone",
-          style: TextStyle(color: Colors.white),
+          style: Theme.of(context).appBarTheme.titleTextStyle,
         ),
         bottom: TabBar(
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.grey,
           controller: _tabController,
+          indicatorColor: Colors.black,           // active tab indicator
+          labelColor: Colors.black,               // active tab text
+          unselectedLabelColor: Colors.white,     // inactive tab text
+          labelStyle: const TextStyle(
+            fontWeight: FontWeight.w500,          // bold active tab
+            fontSize: 16,
+          ),
+          unselectedLabelStyle: const TextStyle(
+            fontWeight: FontWeight.w400,          // slightly less bold inactive tab
+            fontSize: 16,
+          ),
           tabs: const [
-            Tab(
-              text: "Converted Audios",
-            ),
+            Tab(text: "Converted Audios"),
             Tab(text: "Local Music"),
           ],
         ),
       ),
+
       body: TabBarView(
         controller: _tabController,
         children: [
