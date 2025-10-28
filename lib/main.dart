@@ -263,7 +263,6 @@ class _OutputScreenState extends State<OutputScreen>
               Tab(text: "Merged "),
               Tab(text: "Converted"),
             ],
-
         ),
       ),
 

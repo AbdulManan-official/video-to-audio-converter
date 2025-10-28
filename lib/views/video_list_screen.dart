@@ -23,65 +23,166 @@ class VideoListScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text("Videos in ${path.basename(folderName)}"),
-        // Theme from main.dart automatically applies:
-        // - centered title
-        // - bold white text
-        // - consistent color (secondaryColor or primaryColor)
+        leading: IconButton(
+          onPressed: () {
+            Get.back();
+          },
+          icon: const Icon(
+            Icons.arrow_back,
+            color: Colors.white,
+          ),
+        ),
+        backgroundColor: secondaryColor,
+        title: Text(
+          "Videos in ${path.basename(folderName)}",
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
-      body: ListView.builder(
+      body: ListView.separated(
+        padding: EdgeInsets.zero,
         itemCount: videosInFolder.length,
+        separatorBuilder: (context, index) => Container(
+          height: 1,
+          color: Colors.grey[300],
+        ),
         itemBuilder: (context, index) {
           File videoFile = videosInFolder[index];
           var mbSize = videoController.getFileSizeInMB(videoFile.path);
 
-          return ListTile(
-            leading: FutureBuilder<String?>(
-              future: videoController.generateThumbnail(videoFile.path),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return Shimmer.fromColors(
-                    baseColor: Colors.grey.shade300,
-                    highlightColor: Colors.grey.shade100,
-                    child: Container(
-                      width: 150,
-                      height: 250,
-                      color: Colors.white,
-                    ),
-                  );
-                } else if (snapshot.hasData) {
-                  return Image.file(
-                    File(snapshot.data!),
-                    height: 250,
-                    width: 150,
-                    fit: BoxFit.cover,
-                  );
-                } else {
-                  return const Icon(Icons.videocam);
-                }
-              },
-            ),
-            title: Text(
-              path.basename(videoFile.path),
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
-              style: const TextStyle(
-                fontSize: 15,
-                color: Colors.black,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            subtitle: Text(
-              '$mbSize MB',
-              style: const TextStyle(fontWeight: FontWeight.w400),
-            ),
+          return InkWell(
             onTap: () {
               Get.to(
                     () => VideoPlayerScreen(videoPath: videoFile.path),
                 transition: Transition.fade,
               );
             },
-          ).paddingSymmetric(vertical: 6);
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                children: [
+                  // Thumbnail with shimmer loading
+                  FutureBuilder<String?>(
+                    future: videoController.generateThumbnail(videoFile.path),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return Shimmer.fromColors(
+                          baseColor: Colors.grey.shade300,
+                          highlightColor: Colors.grey.shade100,
+                          child: Container(
+                            width: 100,
+                            height: 75,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        );
+                      } else if (snapshot.hasData) {
+                        return ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.file(
+                            File(snapshot.data!),
+                            height: 75,
+                            width: 100,
+                            fit: BoxFit.cover,
+                          ),
+                        );
+                      } else {
+                        return Container(
+                          width: 100,
+                          height: 75,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[300],
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            Icons.videocam,
+                            size: 40,
+                            color: Colors.grey,
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                  const SizedBox(width: 12),
+                  // Video details
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          path.basename(videoFile.path),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            color: Colors.black87,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.storage,
+                              size: 14,
+                              color: Colors.grey[600],
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '$mbSize MB',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey[600],
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.video_library,
+                              size: 14,
+                              color: Colors.grey[600],
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                path.dirname(videoFile.path).split('/').last,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[500],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Play icon - centered vertically
+                  Center(
+
+                    child: Icon(
+                      Icons.chevron_right_sharp,
+                      color: Colors.grey,
+                      size: 26,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
         },
       ),
     );
