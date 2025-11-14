@@ -1,110 +1,114 @@
-🎵 Video to Audio Converter App (Flutter)
+Video to Audio Converter (Flutter)
 
-A Flutter-powered media converter app that lets you easily extract, convert, and manage audio from your videos.
-Built with FFmpegKit and designed for modern Android devices, the app delivers powerful audio processing in a simple and clean interface.
+A modern Flutter media converter app that allows you to extract, convert, merge, and manage audio from your videos. Built with FFmpegKit and optimized for modern Android devices, the app combines powerful audio processing with a clean, responsive, and user-friendly interface.
 
-🚀 Features
+🚀 Key Features
+🎬 Video to Audio Conversion
 
-✅ 🎬 Video to Audio Conversion
-Convert any video from your device into high-quality audio files (MP3, AAC, M4A, WAV, etc.).
+Convert any video on your device into high-quality audio formats such as MP3, AAC, M4A, WAV, and more.
 
-✅ 🔊 Audio Format Converter
-Easily convert audio files between multiple formats with customizable bitrate and quality options.
+🔊 Audio Format Conversion
 
-✅ 🎵 Ringtone Maker & Setter
-Trim and set your converted audio as your default ringtone, notification tone, or alarm tone directly from the app.
+Convert audio files between multiple formats with customizable bitrate and quality.
 
-✅ 🎚️ Merge Audio Files
-Combine multiple audio files into one seamlessly using FFmpeg merge commands.
+🎵 Ringtone Maker & Setter
 
-✅ 📂 Media Picker Support
-Pick videos or audio files directly from your device gallery or file manager.
+Trim and set converted audio files as default ringtone, notification tone, or alarm tone directly within the app.
 
-✅ 🧠 Smart File Handling
-All converted or merged files are stored locally with organized naming and easy sharing options.
+🎚️ Merge Audio Files
 
-✅ 📱 Modern UI
-Clean, minimal Flutter UI with responsive design, progress indicators, and error handling.
+Combine multiple audio files into a single track using FFmpeg merge commands.
 
-✅ 🧩 Plugin Integration
+📂 Media Picker Support
 
-ffmpeg_kit_flutter_full for media conversion
+Pick videos or audio files directly from your gallery or file manager.
 
-permission_handler for runtime permissions
+🧠 Smart Local File Management
 
-file_picker or image_picker for media selection
+All converted, merged, or trimmed files are stored locally with organized naming, sorting, and sharing options.
 
-path_provider for local storage
+📱 Modern & Responsive UI
 
-ringtone_set_mul for setting ringtones
+Fully responsive Flutter UI for all device sizes.
+
+Clean design with progress indicators, animations, and error handling.
+
+🧩 Plugin Integration
+
+ffmpeg_kit_flutter_new – for media conversion
+
+permission_handler – for runtime permissions
+
+file_picker / video_player – for media selection
+
+path_provider – for local storage
+
+ringtone_set_mul – for setting ringtones
 
 🛠️ Tech Stack
 Component	Technology
 Framework	Flutter (Dart)
-Video/Audio Processing	FFmpegKit Flutter
+Audio/Video Processing	FFmpegKit Flutter
 File Management	path_provider, file_picker
 UI	Material Design, Custom Widgets
 Platform	Android (SDK 21+)
 ⚙️ Setup & Installation
-1. Clone the Repository
+
+Clone the repository
+
 git clone https://github.com/AbdulManan-official/video-to-audio-converter
 cd video-to-audio-converter
 
-2. Install Dependencies
+
+Install dependencies
+
 flutter pub get
 
-3. Run in Debug Mode
+
+Run in debug mode
+
 flutter run
 
-4. Build Release APK
+
+Build release APK
+
 flutter build apk --release
 
 
-⚠️ If using minification, make sure to configure proguard-rules.pro properly to prevent FFmpeg and plugin stripping.
+⚠️ If using minification, configure proguard-rules.pro to prevent FFmpeg and plugin stripping.
 
-📂 Folder Structure
-lib/
- ├── main.dart
- ├── screens/
- │    ├── home_screen.dart
- │    ├── converter_screen.dart
- │    ├── merge_screen.dart
- │    ├── ringtone_screen.dart
- ├── widgets/
- │    ├── custom_button.dart
- │    ├── progress_dialog.dart
- ├── utils/
- │    ├── ffmpeg_helper.dart
- │    ├── file_utils.dart
-assets/
- ├── icons/
- ├── sounds/
-android/
- ├── app/
- │    ├── proguard-rules.pro
+📂 Project Structure
+video_to_audio_converter/
+├─ lib/
+│  ├─ controllers/       # State management & logic
+│  ├─ models/            # Data models
+│  ├─ utils/             # Helper functions & utilities
+│  ├─ views/             # Screens & UI
+│  │  ├─ Formate Converter/
+│  │  ├─ Merge_Audio/
+│  │  └─ Ringtone/
+│  └─ main.dart          # App entry point
+├─ ios/
+├─ android/
+├─ plugins/              # Custom ringtone plugin
+└─ pubspec.yaml
 
 🧩 Core Functionalities Explained
 🎬 Extract Audio from Video
 
-Uses FFmpeg command:
+FFmpeg command:
 
 -i input_video.mp4 -vn -acodec mp3 output_audio.mp3
 
 🔊 Convert Audio Format
-
-Convert from one format to another (e.g. WAV → MP3):
-
 -i input.wav -acodec mp3 output.mp3
 
 🎚️ Merge Multiple Audio Files
-
-Merge two or more files seamlessly:
-
--i "concat:track1.mp3|track2.mp3" -acodec copy output.mp3
+-i "concat:track1.mp3|track2.mp3|track3.mp3" -acodec copy output.mp3
 
 🎵 Set Ringtone
 
-After conversion, user can set ringtone using ringtone_set_mul plugin:
+After conversion:
 
 RingtoneSet.setRingtone(path);
 
@@ -114,31 +118,22 @@ READ_EXTERNAL_STORAGE
 
 WRITE_EXTERNAL_STORAGE
 
-MANAGE_EXTERNAL_STORAGE (if targeting Android 11+)
+MANAGE_EXTERNAL_STORAGE (Android 11+)
 
 SET_RINGTONE
 
-Add these in AndroidManifest.xml and handle them using permission_handler.
+Handle permissions using permission_handler and declare them in AndroidManifest.xml.
 
 💡 Future Improvements
 
-Add waveform visualization during trimming.
+Waveform visualization during audio trimming
 
-Add playback controls for preview before saving.
+Playback preview before saving
 
-Add support for background conversion tasks.
+Background conversion tasks
 
-Implement theme toggle (light/dark).
 
-🧾 License
-
-This project is open-source and available under the MIT License.
-Feel free to modify, enhance, and distribute with proper credit.
-
-👨‍💻 Author
 
 Abdul Manan
 📍 Sialkot, Pakistan
 📧 abdullmanan7777@gmail.com
-
-
