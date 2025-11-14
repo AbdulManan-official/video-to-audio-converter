@@ -48,6 +48,7 @@ class VideoFolderView extends StatelessWidget {
   }
 }
 
+
 class FolderListView extends StatelessWidget {
   const FolderListView({super.key, required this.videoController});
 

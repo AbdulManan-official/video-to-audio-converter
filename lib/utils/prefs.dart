@@ -22,7 +22,11 @@ class Prefs {
   static String? getString(String key) {
     return _preferences.getString(key);
   }
+// prefs.dart (Add this method)
 
+  static Future<void> remove(String key) async {
+    await _preferences.remove(key);
+  }
   // static Future<void> setFileSystemEntityList(
   //     String key, List<FileSystemEntity> value) async {
   //   List<String> paths = value.map((e) => e.path).toList();

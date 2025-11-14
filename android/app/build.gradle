@@ -36,10 +36,10 @@ android {
         applicationId = "com.technosofts.videotoaudioconverter"
         minSdkVersion flutter.minSdkVersion
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0.0"
-
+        versionCode = 6 //1
+        versionName = "1.0.3"  //1.0.0   //1.0.2+2
     }
+
 
     signingConfigs {
         release {

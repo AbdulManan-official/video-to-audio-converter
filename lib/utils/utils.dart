@@ -5,9 +5,11 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_downloader/flutter_downloader.dart';
 
-const primaryColor = Color(0xFF1474a4); //blue
-const secondaryColor = Color(0xFFe01f2c); //red
+const primaryColor = Color(0xff007fc0); //blue
+const secondaryColor = Colors.white; //red
 const cardBackground = Color(0xFFF5F5F5);
+Color primaryColornew = Color(0xFF6C63FF);
+
 
 void navigateWithAnimation(BuildContext context, Widget page) {
   Navigator.push(

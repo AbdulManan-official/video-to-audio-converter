@@ -1,8 +1,8 @@
 name: video_to_audio_converter
-description: "A new Flutter project."
+description: "Extract Audio from Videos. Merge multiple Audio Files. Change the Format of Files. Set Audio as Ringtones"
 publish_to: 'none'
 
-version: 1.0.2+5
+version: 1.0.3+6
 environment:
 
   sdk: '>=3.4.0 <4.0.0'
@@ -14,10 +14,11 @@ dependencies:
   get: ^4.7.2
   # Audio & Video video_player: ^2.10.0 video_thumbnail: ^0.5.6
   just_audio: ^0.10.5
+  file_picker: ^10.3.3
   video_player: ^2.10.0
+
   video_thumbnail: ^0.5.6
   ffmpeg_kit_flutter_new: ^3.2.0
-#  ffmpeg_kit_flutter_new: ^3.2.0-min-gpl
 
   # Device / System info
   path_provider: ^2.1.5
@@ -28,6 +29,7 @@ dependencies:
   # Utilities
   fluttertoast: ^9.0.0
   share_plus: ^12.0.0
+  audio_waveforms: ^1.3.0
   ringtone_set_mul:
     path: ./plugins/ringtone_set_mul
   # Network / API
@@ -49,6 +51,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
 
 flutter:
   uses-material-design: true
@@ -58,15 +61,17 @@ flutter:
 
 flutter_launcher_icons:
   android: true
-  image_path: "assets/images/video.png"
+  image_path: "assets/images/logo.png"
   min_sdk_android: 21
-  adaptive_icon_foreground: "assets/images/video.png"
+  adaptive_icon_foreground: "assets/images/logo.png"
+  adaptive_icon_background: "#FFFFFF"
+
 
 flutter_native_splash:
   android: true
   ios: true
   color: "#FFFFFF"
-  image: "assets/images/video.png"
+  image: "assets/images/logo.png"
   android_gravity: center
   ios_content_mode: scaleAspectFit
   web: true

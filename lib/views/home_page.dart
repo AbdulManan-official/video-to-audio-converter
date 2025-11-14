@@ -1,8 +1,10 @@
+
+//responsive done
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:video_to_audio_converter/main.dart';
-import 'package:video_to_audio_converter/utils/utils.dart';
 import '../controllers/controllers.dart';
 import '../controllers/video_controller.dart';
 import 'Formate Converter/fromate_converter.dart';
@@ -10,8 +12,239 @@ import 'Merge_Audio/merge_audio_main.dart';
 import 'Ringtone/ringtone_main.dart';
 import 'videos_screen.dart';
 
+
+// --- Enhanced Animation Widgets ---
+// 1. InteractiveCard with Ripple Effect
+class InteractiveCard extends StatefulWidget {
+  final Widget child;
+  final VoidCallback onTap;
+  final Color baseColor;
+  final double scaleFactor;
+  final Duration animationDuration;
+  final double? minHeight; // Add this line
+
+  const InteractiveCard({
+    super.key,
+    required this.child,
+    required this.onTap,
+    required this.baseColor,
+    this.scaleFactor = 0.96,
+    this.animationDuration = const Duration(milliseconds: 120),
+    this.minHeight, // Add this line
+  });
+
+  @override
+  State<InteractiveCard> createState() => _InteractiveCardState();
+}
+
+class _InteractiveCardState extends State<InteractiveCard> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+  late Animation<Color?> _colorAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: widget.animationDuration,
+    );
+
+    _scaleAnimation = Tween<double>(begin: 1.0, end: widget.scaleFactor).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOutBack),
+    );
+
+    _colorAnimation = ColorTween(
+      begin: widget.baseColor,
+      end: widget.baseColor.withOpacity(0.85),
+    ).animate(_controller);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _handleTapDown(TapDownDetails details) {
+    _controller.forward();
+  }
+
+  void _handleTapUp(TapUpDetails details) async {
+    await _controller.reverse();
+    widget.onTap();
+  }
+
+  void _handleTapCancel() {
+    _controller.reverse();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: _handleTapDown,
+      onTapUp: _handleTapUp,
+      onTapCancel: _handleTapCancel,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: _scaleAnimation.value,
+            child: Container(
+              // Changed: Use constraints instead of fixed height
+              constraints: BoxConstraints(
+                minHeight: widget.minHeight ?? 140,
+              ),
+              decoration: BoxDecoration(
+                color: _colorAnimation.value,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: widget.baseColor.withOpacity(0.3),
+                    blurRadius: 15,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
+              child: child,
+            ),
+          );
+        },
+        child: widget.child,
+      ),
+    );
+  }
+}
+
+
+// 2. PressScaleBox
+class PressScaleBox extends StatefulWidget {
+  final Widget child;
+  final VoidCallback onTap;
+  final double scaleFactor;
+  final Duration animationDuration;
+
+  const PressScaleBox({
+    super.key,
+    required this.child,
+    required this.onTap,
+    this.scaleFactor = 0.98,
+    this.animationDuration = const Duration(milliseconds: 120),
+  });
+
+  @override
+  State<PressScaleBox> createState() => _PressScaleBoxState();
+}
+
+class _PressScaleBoxState extends State<PressScaleBox> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: widget.animationDuration,
+    );
+
+    _scaleAnimation = Tween<double>(begin: 1.0, end: widget.scaleFactor).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.decelerate),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _handleTapDown(TapDownDetails details) {
+    _controller.forward();
+  }
+
+  void _handleTapUp(TapUpDetails details) async {
+    await _controller.reverse();
+    widget.onTap();
+  }
+
+  void _handleTapCancel() {
+    _controller.reverse();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: _handleTapDown,
+      onTapUp: _handleTapUp,
+      onTapCancel: _handleTapCancel,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: _scaleAnimation.value,
+            child: child,
+          );
+        },
+        child: widget.child,
+      ),
+    );
+  }
+}
+
+// 3. Staggered Animation Card - For Feature Cards
+class StaggeredCard extends StatelessWidget {
+  final Widget child;
+  final int index;
+  final Animation<double> animation;
+
+  const StaggeredCard({
+    super.key,
+    required this.child,
+    required this.index,
+    required this.animation,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final delay = index * 0.1;
+
+    return FadeTransition(
+      opacity: Tween<double>(begin: 0.0, end: 1.0).animate(
+        CurvedAnimation(
+          parent: animation,
+          curve: Interval(
+            delay,
+            delay + 0.3,
+            curve: Curves.easeOut,
+          ),
+        ),
+      ),
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(0, 0.15),
+          end: Offset.zero,
+        ).animate(
+          CurvedAnimation(
+            parent: animation,
+            curve: Interval(
+              delay,
+              delay + 0.3,
+              curve: Curves.easeOutCubic,
+            ),
+          ),
+        ),
+        child: child,
+      ),
+    );
+  }
+}
+
+
 class HomeScreen extends StatefulWidget {
-  HomeScreen({super.key});
+  const HomeScreen({super.key});
 
   @override
   _HomeScreenState createState() => _HomeScreenState();
@@ -20,26 +253,46 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   final ConversionController controller = Get.put(ConversionController());
   final videcontroller = Get.put(VideoController());
+  late AnimationController _pulseController;
+  late Animation<double> _scaleAnimation;
 
   BannerAd? _bannerAd;
   bool _isAdLoaded = false;
-  late AnimationController _animationController;
+  late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
+
+  late AnimationController _staggerController;
 
   @override
   void initState() {
     super.initState();
     _loadBannerAd();
 
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 800),
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 600),
       vsync: this,
     );
     _fadeAnimation = CurvedAnimation(
-      parent: _animationController,
+      parent: _fadeController,
       curve: Curves.easeInOut,
     );
-    _animationController.forward();
+    _fadeController.forward();
+
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )
+      ..repeat(reverse: true);
+
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.12)
+        .animate(
+        CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut));
+
+    _staggerController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
+    _staggerController.forward();
   }
 
   void _loadBannerAd() {
@@ -65,150 +318,227 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   @override
   void dispose() {
     _bannerAd?.dispose();
-    _animationController.dispose();
+    _fadeController.dispose();
+    _pulseController.dispose();
+    _staggerController.dispose();
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.white,
-        title: Row(
+  Widget _buildHeader() {
+    final mediaQuery = MediaQuery.of(context);
+    const double referenceWidth = 375.0;
+    const double referenceHeight = 812.0;
+    final double scaleFactor = mediaQuery.size.width / referenceWidth;
+    final double scaleFactorHeight = mediaQuery.size.height / referenceHeight;
+    final double textScaleFactor = mediaQuery.textScaleFactor;
+
+    const Color startColor = Color(0xFF4A7EFF);
+    const Color endColor = Color(0xFF8A2BE2);
+
+    return Container(
+      height: 110 * scaleFactorHeight,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [startColor, endColor],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
+      ),
+      padding: EdgeInsets.only(left: 35 * scaleFactor,
+          right: 20 * scaleFactor,
+          top: 30 * scaleFactorHeight,
+          bottom: 8 * scaleFactorHeight),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: secondaryColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Image.asset(
-                'assets/images/video.png',
-                height: 24,
-                fit: BoxFit.cover,
-              ),
-            ),
-            const SizedBox(width: 12),
-            const Expanded(
-              child: Text(
-                'Video to Audio Converter',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.auto_awesome_outlined,
+                  color: Colors.white,
+                  size: 25 * scaleFactor,
                 ),
-              ),
+                SizedBox(width: 12 * scaleFactor),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Audio Converter',
+                        style: TextStyle(
+                          fontSize: 21 * scaleFactor * textScaleFactor,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      Text(
+                        'Professional audio tools',
+                        style: TextStyle(
+                          fontSize: 11 * scaleFactor * textScaleFactor,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ],
         ),
       ),
-      body: FadeTransition(
-        opacity: _fadeAnimation,
-        // **REMOVED ListView, replaced with Padding and Column**
-        child: Padding(
-          padding: const EdgeInsets.all(20),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    const double referenceWidth = 375.0;
+    const double referenceHeight = 812.0;
+    final double scaleFactor = mediaQuery.size.width / referenceWidth;
+    final double scaleFactorHeight = mediaQuery.size.height / referenceHeight;
+    final double textScaleFactor = mediaQuery.textScaleFactor;
+
+    const double overlapHeight = 16.0;
+
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SingleChildScrollView(
+        child: FadeTransition(
+          opacity: _fadeAnimation,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Hero Card - Video to Audio Converter
-              _buildHeroCard(),
+              _buildHeader(),
+              Transform.translate(
+                offset: Offset(0.0, -overlapHeight * scaleFactorHeight),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 20.0 * scaleFactor),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.symmetric(horizontal: 0),
+                        child: _buildHeroCard(
+                            scaleFactor, scaleFactorHeight, textScaleFactor),
+                      ),
 
-              const SizedBox(height: 24),
+                      SizedBox(height: 20 * scaleFactorHeight),
 
-              // Section Title
-              const Text(
-                'Quick Actions',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+                      Text(
+                        'More Tools',
+                        style: TextStyle(
+                          fontSize: 18 * scaleFactor * textScaleFactor,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+
+                      SizedBox(height: 16 * scaleFactorHeight),
+
+                      // First Row with Staggered Animation
+                      Row(
+                        children: [
+                          Expanded(
+                            child: StaggeredCard(
+                              index: 0,
+                              animation: _staggerController,
+                              child: _buildFeatureCard(
+                                title: 'My Library',
+                                subtitle: 'View converted files',
+                                icon: Icons.folder_open_rounded,
+                                color: const Color(0xff0498e1),
+                                scaleFactor: scaleFactor,
+                                scaleFactorHeight: scaleFactorHeight,
+                                textScaleFactor: textScaleFactor,
+                                onTap: () {
+                                  Get.to(() => const OutputScreen(),
+                                      transition: Transition.fadeIn);
+                                },
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: 10 * scaleFactor),
+                          Expanded(
+                            child: StaggeredCard(
+                              index: 1,
+                              animation: _staggerController,
+                              child: _buildFeatureCard(
+                                title: 'Merge Audio',
+                                subtitle: 'Combine multiple files',
+                                icon: Icons.merge_outlined,
+                                color: const Color(0xFF7736DE),
+                                scaleFactor: scaleFactor,
+                                scaleFactorHeight: scaleFactorHeight,
+                                textScaleFactor: textScaleFactor,
+                                onTap: () {
+                                  Get.to(() => const MergeAudioScreen(),
+                                      transition: Transition.fadeIn);
+                                },
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      SizedBox(height: 10 * scaleFactorHeight),
+
+                      // Second Row with Staggered Animation
+                      Row(
+                        children: [
+                          Expanded(
+                            child: StaggeredCard(
+                              index: 2,
+                              animation: _staggerController,
+                              child: _buildFeatureCard(
+                                title: 'Convert Format',
+                                subtitle: 'Change audio format',
+                                icon: Icons.audio_file_outlined,
+                                color: const Color(0xFF3BBEA6),
+                                scaleFactor: scaleFactor,
+                                scaleFactorHeight: scaleFactorHeight,
+                                textScaleFactor: textScaleFactor,
+                                onTap: () {
+                                  Get.to(() => const FormateMain(),
+                                      transition: Transition.fadeIn);
+                                },
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: 10 * scaleFactor),
+                          Expanded(
+                            child: StaggeredCard(
+                              index: 3,
+                              animation: _staggerController,
+                              child: _buildFeatureCard(
+                                title: 'Set Ringtone',
+                                subtitle: 'Custom Ringtones',
+                                icon: Icons.notifications_outlined,
+                                color: const Color(0xFFE68A00),
+                                scaleFactor: scaleFactor,
+                                scaleFactorHeight: scaleFactorHeight,
+                                textScaleFactor: textScaleFactor,
+                                onTap: () {
+                                  Get.to(() => const SetRingtonePage(),
+                                      transition: Transition.fadeIn);
+                                },
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      SizedBox(height: 20 * scaleFactorHeight),
+                    ],
+                  ),
                 ),
               ),
 
-              const SizedBox(height: 16),
-
-              // First Row of Cards
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildFeatureCard(
-                      title: 'Output',
-                      icon: Icons.folder_rounded,
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF6B9AFF), Color(0xFF4A7EFF)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      onTap: () {
-                        Get.to(() => const OutputScreen(),
-                            transition: Transition.fadeIn);
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildFeatureCard(
-                      title: 'Merge Audio',
-                      icon: Icons.audio_file_rounded,
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFFFF9A6B), Color(0xFFFF7A4A)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      onTap: () {
-                        Get.to(() => const MergeAudioScreen(),
-                            transition: Transition.fadeIn);
-                      },
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 16),
-
-              // Second Row of Cards
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildFeatureCard(
-                      title: 'Format Converter',
-                      icon: Icons.swap_horiz_rounded,
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF9B6BFF), Color(0xFF7A4AFF)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      onTap: () {
-                        Get.to(() => const FormateMain(),
-                            transition: Transition.fadeIn);
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildFeatureCard(
-                      title: 'Set Ringtone',
-                      icon: Icons.notifications_active_rounded,
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF6BFFB4), Color(0xFF4AFFAA)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      onTap: () {
-                        Get.to(() => const SetRingtonePage(),
-                            transition: Transition.fadeIn);
-                      },
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 20),
-              // If the layout still overflows on small screens, you can wrap the content (from _buildHeroCard down) in an Expanded widget
-              // and wrap the entire Column in a Flexible widget, but since you are aiming for no scroll,
-              // this current structure is the correct non-scrolling solution for this content size.
+              SizedBox(height: overlapHeight * scaleFactorHeight),
             ],
           ),
         ),
@@ -216,22 +546,22 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       bottomNavigationBar: _isAdLoaded
           ? SafeArea(
         child: Container(
-          margin: const EdgeInsets.all(8),
+          margin: EdgeInsets.all(8 * scaleFactor),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(12 * scaleFactor),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, -2),
+                blurRadius: 10 * scaleFactor,
+                offset: Offset(0, -2 * scaleFactorHeight),
               ),
             ],
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(12 * scaleFactor),
             child: SizedBox(
-              height: _bannerAd!.size.height.toDouble(),
+              height: _bannerAd!.size.height.toDouble() * scaleFactorHeight,
               child: AdWidget(ad: _bannerAd!),
             ),
           ),
@@ -241,134 +571,112 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildHeroCard() {
-    return InkWell(
+  Widget _buildHeroCard(double scaleFactor, double scaleFactorHeight,
+      double textScaleFactor) {
+    const Color _primaryColor = Color(0xFF6C63FF);
+
+    return PressScaleBox(
       onTap: () {
         Get.to(() => const VideoView(), transition: Transition.fadeIn);
       },
-      borderRadius: BorderRadius.circular(24),
+      scaleFactor: 0.98,
       child: Container(
-        height: 190,
+        height: 185 * scaleFactorHeight,
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              secondaryColor,
-              secondaryColor.withOpacity(0.8),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(24),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24 * scaleFactor),
           boxShadow: [
             BoxShadow(
-              color: secondaryColor.withOpacity(0.3),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
+              color: _primaryColor.withOpacity(0.2),
+              blurRadius: 20 * scaleFactor,
+              offset: Offset(0, 10 * scaleFactorHeight),
             ),
           ],
         ),
         child: Stack(
           children: [
-            // Decorative circles
-            Positioned(
-              right: -20,
-              top: -20,
-              child: Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withOpacity(0.1),
-                ),
-              ),
-            ),
-            Positioned(
-              right: 40,
-              bottom: -30,
-              child: Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withOpacity(0.05),
-                ),
-              ),
-            ),
-
-            // Content
             Padding(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.all(24 * scaleFactor),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(12),
+                        padding: EdgeInsets.symmetric(
+                            horizontal: 10 * scaleFactor,
+                            vertical: 4 * scaleFactorHeight),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(12),
+                          color: _primaryColor,
+                          borderRadius: BorderRadius.circular(20 * scaleFactor),
                         ),
-                        child: const Icon(
-                          Icons.video_library_rounded,
-                          color: Colors.white,
-                          size: 28,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      const Expanded(
-                        child: Text(
-                          // Reduced font size from 24 to 23 for a bit more safety
-                          'Video to Audio',
-                          style: TextStyle(
-                            fontSize: 23,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            CircleAvatar(radius: 3 * scaleFactor,
+                                backgroundColor: Colors.white),
+                            SizedBox(width: 8 * scaleFactor),
+                            Text(
+                              'Quick Convert',
+                              style: TextStyle(
+                                fontSize: 14 * scaleFactor * textScaleFactor,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8), // Reduced spacing from 12 to 10
+
+                  SizedBox(height: 22 * scaleFactorHeight),
                   Text(
-                    'Convert your videos to audio files', // Slightly shortened text
+                    'Video to Audio',
                     style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.white.withOpacity(0.9),
+                      fontSize: 25 * scaleFactor * textScaleFactor,
+                      fontWeight: FontWeight.w900,
+                      color: _primaryColor,
+                      height: 1.1,
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(25),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Start Converting',
-                          style: TextStyle(
-                            color: secondaryColor,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Icon(
-                          Icons.arrow_forward_rounded,
-                          color: secondaryColor,
-                          size: 18,
-                        ),
-                      ],
+                  SizedBox(height: 6 * scaleFactorHeight),
+                  Text(
+                    'Tap to get started',
+                    style: TextStyle(
+                      fontSize: 14 * scaleFactor * textScaleFactor,
+                      color: _primaryColor,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
+              ),
+            ),
+
+            Positioned(
+              right: 25 * scaleFactor,
+              top: 0,
+              bottom: 0,
+              child: Center(
+                child: ScaleTransition(
+                  scale: _scaleAnimation,
+                  child: Container(
+                    width: 60 * scaleFactor,
+                    height: 60 * scaleFactor,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: _primaryColor.withOpacity(0.4)),
+                      color: _primaryColor.withOpacity(1),
+                    ),
+                    child: Icon(
+                      Icons.play_arrow_rounded,
+                      color: Colors.white,
+                      size: 45 * scaleFactor,
+                    ),
+                  ),
+                ),
               ),
             ),
           ],
@@ -379,101 +687,73 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Widget _buildFeatureCard({
     required String title,
+    required String subtitle,
     required IconData icon,
-    required Gradient gradient,
+    required Color color,
     required VoidCallback onTap,
+    required double scaleFactor,
+    required double scaleFactorHeight,
+    required double textScaleFactor,
   }) {
-    return InkWell(
+    return InteractiveCard(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        height: 125,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 15,
-              offset: const Offset(0, 5),
-            ),
-          ],
-        ),
+      baseColor: color,
+      minHeight: 140 * scaleFactorHeight, // Add this parameter
+      child: Padding(
+        padding: EdgeInsets.all(16.0 * scaleFactor),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min, // Changed from mainAxisAlignment
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Icon at top
             Container(
-              padding: const EdgeInsets.all(16),
+              width: 48 * scaleFactor,
+              height: 48 * scaleFactor,
               decoration: BoxDecoration(
-                gradient: gradient,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: gradient.colors.first.withOpacity(0.3),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.15),
               ),
-              child: Icon(
-                icon,
-                color: Colors.white,
-                size: 32,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Text(
-                title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
+              child: Center(
+                child: Icon(
+                  icon,
+                  color: Colors.white,
+                  size: 28 * scaleFactor,
                 ),
               ),
             ),
+
+            SizedBox(height: 12 * scaleFactorHeight), // Add spacing
+
+            // Title - expandable
+            Text(
+              title,
+              maxLines: 2,
+              overflow: TextOverflow.visible, // Changed from ellipsis
+              style: TextStyle(
+                fontSize: 15 * scaleFactor * textScaleFactor,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                height: 1.2,
+              ),
+            ),
+
+            SizedBox(height: 4 * scaleFactorHeight),
+
+            // Subtitle - expandable
+            Text(
+              subtitle,
+              maxLines: 2,
+              overflow: TextOverflow.visible, // Changed from ellipsis
+              style: TextStyle(
+                fontSize: 11 * scaleFactor * textScaleFactor,
+                color: Colors.white.withOpacity(0.9),
+                fontWeight: FontWeight.w600,
+                height: 1.3,
+              ),
+            ),
           ],
         ),
       ),
-    );
-  }
-}
-
-Widget buildOptionCard(
-    BuildContext context, {
-      required String title,
-      required IconData icon,
-      required VoidCallback onTap,
-    }) {
-  return Card(
-    color: Colors.white,
-    margin: const EdgeInsets.symmetric(vertical: 5),
-    elevation: 2,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(12),
-    ),
-    child: ListTile(
-      leading: CircleAvatar(
-        backgroundColor: Colors.white,
-        child: Icon(icon, color: primaryColor),
-      ),
-      title: Text(title, style: const TextStyle(fontSize: 16)),
-      trailing: const Icon(Icons.arrow_forward_ios),
-      onTap: onTap,
-    ),
-  );
-}
-
-class VoiceChangeScreen extends StatelessWidget {
-  const VoiceChangeScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Voice Change")),
-      body: const Center(child: Text("Voice Change Screen")),
     );
   }
 }

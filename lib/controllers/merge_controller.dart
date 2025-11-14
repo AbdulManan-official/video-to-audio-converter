@@ -8,6 +8,9 @@ import 'dart:async';
 import '../utils/audio_merge_util.dart'; // <- New import
 
 class MergeAudioController extends GetxController {
+  // In MergeAudioController
+  var selectedOrder = <int>[].obs;
+
   var mp3Files = <File>[].obs; // Observable list of MP3 files
   var selectedItems = <bool>[].obs; // Observable list of selected items
   var mp3FilesOfMusic = <File>[].obs; // Observable list of MP3 files
@@ -35,6 +38,63 @@ class MergeAudioController extends GetxController {
     }
   }
 
+  /// Sequential Merging Utility
+  /// Merges a list of files by repeatedly calling mergeTwoFiles.
+  Future<String> _sequentialMerge(
+      List<String> filePaths, String outputFileName) async {
+    if (filePaths.length < 2) {
+      return ''; // Already checked in the public method, but good to ensure
+    }
+
+    String currentMergedPath = filePaths[0]; // Start with the first file
+
+    // We start a loop from the second file (index 1)
+    for (int i = 1; i < filePaths.length; i++) {
+      String fileToMerge = filePaths[i];
+      // Generate a temporary name for the intermediate merge result
+      String tempOutputName = 'temp_merge_step_$i.mp3';
+
+      // Merge the current accumulated result with the next file
+      String nextMergedPath = await AudioMergeUtils.mergeTwoFiles(
+          currentMergedPath, fileToMerge, tempOutputName);
+
+      if (nextMergedPath.isEmpty) {
+        // Log the failure and stop
+        print("[MergeAudio] Sequential merge failed at step $i");
+        // NOTE: Need to handle cleanup of temp files here in a real app
+        return '';
+      }
+
+      // If it was successful, the result becomes the base for the next step
+      currentMergedPath = nextMergedPath;
+    }
+
+    // After the loop, the final temporary file (currentMergedPath) needs
+    // to be renamed/copied to the final outputFileName
+    if (currentMergedPath.isNotEmpty) {
+      String finalTempPath = currentMergedPath;
+      String finalOutputPath = finalTempPath.replaceFirst(
+        RegExp(r'temp_merge_step_\d+\.mp3$'), // Regex to replace the temp name
+        outputFileName,
+      );
+
+      // Simple rename operation. If your utility creates files in a temp directory,
+      // this needs adjustment to move/copy the file to the correct location.
+      // For simplicity, we assume the utility returns a full path which we rename.
+      final File finalFile = File(finalTempPath);
+      await finalFile.rename(finalOutputPath); // Rename the final temporary file
+
+      // Clean up the previous temp file before returning the final path
+      // This part is tricky without knowing the exact temp file storage,
+      // but the final path is now finalOutputPath.
+
+      return finalOutputPath;
+    }
+
+    return '';
+  }
+
+
   /// Merge audio files locally using FFmpeg utils
   Future<String> mergeAudioFiles(
       List<String> filePaths, String outputFileName) async {
@@ -45,11 +105,13 @@ class MergeAudioController extends GetxController {
 
     try {
       isMerging.value = true;
-      print("[MergeAudio] Starting local merge...");
+      print("[MergeAudio] Starting sequential merge of ${filePaths.length} files...");
 
-      // Call local merge utility
-      final mergedPath = await AudioMergeUtils.mergeTwoFiles(
-          filePaths[0], filePaths[1], outputFileName);
+      // Call the sequential merge logic
+      final mergedPath = await _sequentialMerge(
+          filePaths, outputFileName);
+
+      // The sequential merge handles temporary file creation and renaming to the final file name
 
       if (mergedPath.isEmpty) {
         print("[MergeAudio] Error: Merging failed");
@@ -66,6 +128,7 @@ class MergeAudioController extends GetxController {
     }
   }
 
+  // ... (rest of the controller code remains the same)
   void checkFile(String path) async {
     final file = File(path);
     if (await file.exists()) {

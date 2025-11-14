@@ -22,6 +22,9 @@ class FormateAudioController extends GetxController {
   var selectedFiles = <String>[].obs;
   var fileProgress = <RxDouble>[].obs;
 
+  // NEW: Flag to determine duplicate handling strategy
+  var shouldReplaceExisting = true.obs;
+
   void addFile(String filePath) {
     if (!selectedFiles.contains(filePath)) {
       selectedFiles.add(filePath);
@@ -42,6 +45,60 @@ class FormateAudioController extends GetxController {
     fileProgress.clear();
   }
 
+  // NEW: Helper method to check if any output files already exist
+  Future<List<String>> checkForDuplicates() async {
+    List<String> duplicateFiles = [];
+
+    Directory musicDir = Directory('/storage/emulated/0/Music/Format Converter');
+
+    for (String filePath in selectedFiles) {
+      String outputPath =
+          "${musicDir.path}/${filePath.split('/').last.split('.').first}_converted.${selectedFormat.value.toLowerCase()}";
+
+      if (await File(outputPath).exists()) {
+        duplicateFiles.add(outputPath.split('/').last);
+      }
+    }
+
+    return duplicateFiles;
+  }
+
+  // NEW: Generate unique filename if file exists
+  String _getUniqueOutputPath(String outputPath) {
+    if (shouldReplaceExisting.value) {
+      // Replace mode: return original path (will overwrite)
+      return outputPath;
+    }
+
+    // Keep & Rename mode: generate unique filename
+    File file = File(outputPath);
+    if (!file.existsSync()) {
+      return outputPath;
+    }
+
+    // Extract components
+    String directory = file.parent.path;
+    String fullFileName = file.path.split('/').last;
+    String extension = fullFileName.split('.').last;
+    String baseNameWithSuffix = fullFileName.substring(0, fullFileName.length - extension.length - 1);
+
+    // Remove existing "_converted" suffix if present
+    String baseName = baseNameWithSuffix;
+    if (baseName.endsWith('_converted')) {
+      baseName = baseName.substring(0, baseName.length - 10); // Remove "_converted"
+    }
+
+    // Find unique filename
+    int counter = 1;
+    String newPath;
+    do {
+      newPath = '$directory/${baseName}_converted ($counter).$extension';
+      counter++;
+    } while (File(newPath).existsSync());
+
+    return newPath;
+  }
+
   Future<void> convertAllFiles() async {
     if (selectedFiles.isEmpty || selectedFormat.isEmpty) {
       Get.snackbar("Error", "Please select files and a format");
@@ -59,8 +116,12 @@ class FormateAudioController extends GetxController {
           await musicDir.create(recursive: true);
         }
 
-        final outputPath =
+        // Initial output path
+        String outputPath =
             "${musicDir.path}/${filePath.split('/').last.split('.').first}_converted.${selectedFormat.value.toLowerCase()}";
+
+        // NEW: Get unique path based on duplicate handling strategy
+        outputPath = _getUniqueOutputPath(outputPath);
 
         progress.value = 0.0;
         for (int j = 0; j <= 100; j++) {
@@ -76,5 +137,14 @@ class FormateAudioController extends GetxController {
 
     isConverting.value = false;
     Get.snackbar("Success", "All files converted successfully");
+  }
+
+  // Reset controller
+  void reset() {
+    selectedFiles.clear();
+    fileProgress.clear();
+    selectedFormat.value = '';
+    isConverting.value = false;
+    shouldReplaceExisting.value = true;
   }
 }

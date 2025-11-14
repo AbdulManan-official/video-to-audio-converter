@@ -4,6 +4,7 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:ringtone_set_mul/ringtone_set_mul.dart';
 import 'package:video_to_audio_converter/utils/prefs.dart';
 import 'package:video_to_audio_converter/utils/resources.dart';
 import 'package:video_to_audio_converter/utils/ringtone_set_mul.dart';
@@ -16,6 +17,7 @@ import '../../controllers/video_controller.dart';
 import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
 import 'package:path/path.dart' as p;
 import '../../utils/search_filter_bar.dart';
+// Assuming this imports buildGenericSearchBar, buildGenericFilterTabs, and filterAndSortWithPinnedItem
 
 const Color secondaryColor = Color(0xFF6C63FF);
 const Color primaryColor = Color(0xFF6C63FF);
@@ -46,10 +48,6 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
   double _trimDurationMs = 30000.0;
   bool _isProcessing = false;
 
-  // Permission state
-  bool _hasWritePermission = false;
-  int _androidSdkVersion = 0;
-
   // Controllers
   final VideoController videoController = Get.put(VideoController());
   final MergeAudioController mergeController = Get.put(MergeAudioController());
@@ -67,8 +65,10 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
   Map<String, String> localMusicFileSizes = {};
   Map<String, Duration> localMusicFileDurations = {};
 
-  // Audio players
+  // SINGLE SHARED AUDIO PLAYER for the entire screen
   final AudioPlayer _audioPlayer = AudioPlayer();
+
+  // New audio player dedicated to the file list
   final AudioPlayer _listAudioPlayer = AudioPlayer();
 
   // GlobalKey to access TrimAudioWidget's audio player
@@ -78,44 +78,29 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
   @override
   void initState() {
     super.initState();
-    _initializePermissionsAndRingtone();
+    _requestRingtonePermission().then((_) {
+      _loadAppSelectedRingtone();
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchAllAppAudioFiles();
     });
-    _setupAudioPlayerListeners();
-  }
-
-  Future<void> _initializePermissionsAndRingtone() async {
-    try {
-      // Get Android SDK version
-      final deviceInfo = DeviceInfoPlugin();
-      final androidInfo = await deviceInfo.androidInfo;
-      _androidSdkVersion = androidInfo.version.sdkInt;
-
-      log('[Init] Android SDK Version: $_androidSdkVersion');
-
-      // Check and request permissions
-      await _requestRingtonePermission();
-
-      // Load saved ringtone
-      await _loadAppSelectedRingtone();
-    } catch (e) {
-      log('[Init] Error during initialization: $e');
-    }
-  }
-
-  void _setupAudioPlayerListeners() {
     _audioPlayer.playerStateStream.listen((playerState) {
       if (playerState.processingState == ProcessingState.completed) {
+        // Stop playback and reset so play icon shows again
         _audioPlayer.stop();
-        if (mounted) setState(() {});
+        if (mounted) {
+          setState(() {});
+        }
       }
     });
 
     _listAudioPlayer.playerStateStream.listen((playerState) {
       if (playerState.processingState == ProcessingState.completed) {
+        // Stop playback and reset so play icon shows again
         _listAudioPlayer.stop();
-        if (mounted) setState(() {});
+        if (mounted) {
+          setState(() {});
+        }
       }
     });
   }
@@ -135,87 +120,40 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
   }
 
   Future<void> _requestRingtonePermission() async {
-    try {
-      log('[Permission] Checking write permission...');
-      _hasWritePermission = await RingtoneSetMul.isWriteGranted;
-      log('[Permission] Write permission status: $_hasWritePermission');
+    bool granted = await RingtoneSetMul.isWriteGranted;
+    if (!granted) {
+      granted = await RingtoneSetMul.requestSystemPermissions();
+    }
 
-      if (!_hasWritePermission) {
-        log('[Permission] Requesting system permissions...');
-        _hasWritePermission = await RingtoneSetMul.requestSystemPermissions();
-        log('[Permission] Permission request result: $_hasWritePermission');
-      }
-
-      if (!_hasWritePermission) {
-        _showPermissionDeniedDialog();
-      }
-    } catch (e) {
-      log('[Permission] Error checking/requesting permissions: $e');
-      _hasWritePermission = false;
+    if (!granted) {
+      toastFlutter(
+        toastmessage: "Cannot set ringtone without permission",
+        color: Colors.red[700],
+      );
     }
   }
 
-  void _showPermissionDeniedDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Permission Required'),
-        content: const Text(
-          'This app needs permission to modify system settings to set ringtones. '
-              'Please grant the permission in the next screen.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pop(context);
-            },
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await _requestRingtonePermission();
-            },
-            child: const Text('Grant Permission'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _loadAppSelectedRingtone() async {
+  void _loadAppSelectedRingtone() {
     final path = Prefs.getString('ringtone_path') ?? '';
     final name = Prefs.getString('ringtone_string') ?? '';
 
-    log('[LoadRingtone] Retrieved path: $path');
-    log('[LoadRingtone] Retrieved name: $name');
+    log('[_loadAppSelectedRingtone] Called');
+    log('[_loadAppSelectedRingtone] Retrieved path: $path');
+    log('[_loadAppSelectedRingtone] Retrieved name: $name');
 
-    if (path.isNotEmpty) {
-      final file = File(path);
-      if (await file.exists()) {
-        setState(() {
-          _appSelectedRingtone = file;
-          _appSelectedRingtoneName = name;
-        });
-        log('[LoadRingtone] Ringtone loaded: $_appSelectedRingtoneName');
-      } else {
-        log('[LoadRingtone] File does not exist, clearing preferences');
-        await _clearRingtonePreferences();
-      }
+    if (path.isNotEmpty && File(path).existsSync()) {
+      setState(() {
+        _appSelectedRingtone = File(path);
+        _appSelectedRingtoneName = name;
+      });
+      log('[_loadAppSelectedRingtone] Ringtone loaded successfully: $_appSelectedRingtoneName');
     } else {
-      log('[LoadRingtone] No ringtone path found');
+      setState(() {
+        _appSelectedRingtone = null;
+        _appSelectedRingtoneName = null;
+      });
+      log('[_loadAppSelectedRingtone] No ringtone found or file does not exist at path: $path');
     }
-  }
-
-  Future<void> _clearRingtonePreferences() async {
-    Prefs.remove('rintone_set');
-    Prefs.remove('ringtone_string');
-    Prefs.remove('ringtone_path');
-    setState(() {
-      _appSelectedRingtone = null;
-      _appSelectedRingtoneName = null;
-    });
   }
 
   Future<void> _deletePreviousRingtoneFromDevice() async {
@@ -225,45 +163,44 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
       final path = _appSelectedRingtone!.path;
       final file = File(path);
 
-      // Only delete if it's in the Ringtones directory (our created files)
-      if (path.contains('/Music/Ringtones/') && path.contains('_ringtone_')) {
-        if (await file.exists()) {
-          await file.delete();
-          log('[DeleteRingtone] Deleted previous ringtone: $path');
-        }
-      } else {
-        log('[DeleteRingtone] Skipped deletion (not our created file): $path');
+      if (await file.exists()) {
+        await file.delete();
+        log('Previous ringtone deleted from device: $path');
       }
+
+      Prefs.remove('rintone_set');
+      Prefs.remove('ringtone_string');
+      Prefs.remove('ringtone_path');
     } catch (e) {
-      log('[DeleteRingtone] Error: $e');
+      log('Failed to delete previous ringtone: $e');
     }
   }
 
   // --- STOP ALL AUDIO PLAYBACK ---
   void _stopAllAudio() {
+    // Stop the main audio player
     _audioPlayer.stop();
+
+    // Stop the list audio player
     _listAudioPlayer.stop();
+
+    // Stop the trim widget's audio player if it exists
     _trimAudioKey.currentState?.stopAudio();
   }
 
   Future<void> _playAudio(File audioFile) async {
-    // Check if we're already playing this specific file
-    final isPlayingThisFile = _listAudioPlayer.playing &&
-        _listAudioPlayer.audioSource?.sequence.first.tag == audioFile.path;
+    _stopAllAudio();
 
-    if (isPlayingThisFile) {
-      // If playing this file, stop it
+    if (_listAudioPlayer.playing &&
+        _listAudioPlayer.audioSource?.sequence.first.tag == audioFile.path) {
       await _listAudioPlayer.stop();
     } else {
-      // Stop all other audio first
-      _stopAllAudio();
-
-      // Then play the new file
       try {
-        await _listAudioPlayer.setFilePath(audioFile.path, tag: audioFile.path);
+        await _listAudioPlayer.setFilePath(audioFile.path,
+            tag: audioFile.path);
         await _listAudioPlayer.play();
       } catch (e) {
-        log('[PlayAudio] Error: $e');
+        log('Error playing audio: $e');
       }
     }
     setState(() {});
@@ -337,7 +274,7 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
         });
       }
     } catch (e) {
-      log('[FetchLocal] Error: $e');
+      log('Error fetching local music: $e');
       if (mounted) {
         setState(() {
           _isFetchingLocalFiles = false;
@@ -371,7 +308,7 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
       durationsMap[fileName] = duration ?? Duration.zero;
       if (mounted) setState(() {});
     } catch (e) {
-      log('[LoadDuration] Error for ${file.path}: $e');
+      log('Error loading duration for ${file.path}: $e');
       durationsMap[fileName] = Duration.zero;
     } finally {
       audioPlayer.dispose();
@@ -401,156 +338,51 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
       File sourceFile, double startMs, double durationMs) async {
     final start = startMs / 1000;
     final duration = durationMs / 1000;
-
-    // CRITICAL: Must save to external storage, not app cache!
-    // Android requires ringtone files to be in /storage/emulated/0/
-    final externalDir = Directory('/storage/emulated/0/Music/Ringtones');
-
-    // Create directory if it doesn't exist
-    if (!await externalDir.exists()) {
-      await externalDir.create(recursive: true);
-      log('[TrimAudio] Created Ringtones directory');
-    }
-
+    final tempDir = Directory.systemTemp;
     final name = p.basenameWithoutExtension(sourceFile.path);
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final newPath = "${externalDir.path}/${name}_ringtone_$timestamp.mp3";
-
+    final newPath =
+        "${tempDir.path}/${name}_temp_${DateTime.now().millisecondsSinceEpoch}.mp3";
     final cmd =
         "-i \"${sourceFile.path}\" -ss $start -t $duration -acodec libmp3lame -b:a 192k \"$newPath\"";
-
-    log('[TrimAudio] FFmpeg command: $cmd');
-    log('[TrimAudio] Output path: $newPath');
-
+    log('FFmpeg command: $cmd');
     final session = await FFmpegKit.execute(cmd);
     final returnCode = await session.getReturnCode();
 
     if (!returnCode!.isValueSuccess()) {
+      log('FFmpeg command failed with return code: ${returnCode.getValue()}');
       final output = await session.getOutput();
-      log('[TrimAudio] FFmpeg failed: ${returnCode.getValue()}');
-      log('[TrimAudio] Output: $output');
+      log('FFmpeg output: $output');
       throw Exception('Failed to trim audio file');
     }
 
     final trimmedFile = File(newPath);
-    if (!await trimmedFile.exists()) {
-      throw Exception('Trimmed file was not created');
+    if (!await trimmedFile.exists() || await trimmedFile.length() == 0) {
+      log('Trimmed file check failed. Exists: ${await trimmedFile.exists()}, Length: ${await trimmedFile.length()}');
+      throw Exception('Trimmed file was not created or is empty');
     }
-
-    final fileSize = await trimmedFile.length();
-    if (fileSize == 0) {
-      throw Exception('Trimmed file is empty');
-    }
-
-    log('[TrimAudio] Success: $newPath (${_formatBytes(fileSize)})');
     return trimmedFile;
   }
 
-  Future<bool> _verifyFileForRingtone(File file) async {
-    try {
-      // Check if file exists
-      if (!await file.exists()) {
-        log('[VerifyFile] File does not exist: ${file.path}');
-        return false;
-      }
+  void _setRingtone(String songTitle, File file) async {
+    DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
+    AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
+    int sdkInt = androidInfo.version.sdkInt;
 
-      // Check file size
-      final fileSize = await file.length();
-      if (fileSize == 0) {
-        log('[VerifyFile] File is empty');
-        return false;
-      }
+    Function setRingtoneFunc = (sdkInt >= 29)
+        ? RingtoneSetter.setRingtone
+        : RingtoneSet.setRingtoneFromFile;
 
-      // Check if file is readable
-      final bytes = await file.readAsBytes();
-      if (bytes.isEmpty) {
-        log('[VerifyFile] Cannot read file');
-        return false;
-      }
+    log('Attempting to set ringtone with path: ${file.path}');
 
-      log('[VerifyFile] File verified: ${_formatBytes(fileSize)}');
-      return true;
-    } catch (e) {
-      log('[VerifyFile] Error: $e');
-      return false;
-    }
-  }
-
-  Future<void> _setRingtone(String songTitle, File file) async {
-    log('[SetRingtone] Starting process for: $songTitle');
-    log('[SetRingtone] File path: ${file.path}');
-
-    // Verify the file is in external storage
-    if (!file.path.startsWith('/storage/emulated/0/')) {
-      log('[SetRingtone] Error: File not in external storage');
-      toastFlutter(
-        toastmessage: "File must be in external storage",
-        color: Colors.red[700],
-      );
-      return;
-    }
-
-    // Verify file before attempting to set
-    final isValid = await _verifyFileForRingtone(file);
-    if (!isValid) {
-      toastFlutter(
-        toastmessage: "Invalid audio file",
-        color: Colors.red[700],
-      );
-      return;
-    }
-
-    // Check permission again before setting
-    if (!_hasWritePermission) {
-      log('[SetRingtone] No write permission');
-      toastFlutter(
-        toastmessage: "Permission required to set ringtone",
-        color: Colors.red[700],
-      );
-      await _requestRingtonePermission();
-      return;
-    }
-
-    try {
-      log('[SetRingtone] Calling RingtoneSetMul.setRingtone()...');
-
-      // Get Android SDK version to use appropriate method
-      final deviceInfo = DeviceInfoPlugin();
-      final androidInfo = await deviceInfo.androidInfo;
-      final sdkInt = androidInfo.version.sdkInt;
-
-      log('[SetRingtone] Android SDK: $sdkInt');
-
-      bool success = false;
-
-      if (sdkInt >= 29) {
-        // Android 10 and above - use RingtoneSetter
-        success = await RingtoneSetMul.setRingtone(
-          file.path,
-          mimeType: 'audio/mpeg',
-        );
-      } else {
-        // Android 9 and below - use RingtoneSet
-        success = await RingtoneSetMul.setRingtone(
-          file.path,
-          mimeType: 'audio/mpeg',
-        );
-      }
-
-      log('[SetRingtone] Result: $success');
-
-      if (success) {
-        // Save preferences
-        await Prefs.setBool('rintone_set', true);
-        await Prefs.setString('ringtone_string', songTitle);
-        await Prefs.setString('ringtone_path', file.path);
-
+    setRingtoneFunc(file.path).then(
+          (value) {
+        Prefs.setBool('rintone_set', true);
+        Prefs.setString('ringtone_string', songTitle);
+        Prefs.setString('ringtone_path', file.path);
         toastFlutter(
-          toastmessage: '$songTitle ringtone set successfully',
-          color: Colors.green[700],
-        );
+            toastmessage: '$songTitle ringtone set', color: Colors.green[700]);
 
-        log('[SetRingtone] Success: $songTitle at ${file.path}');
+        log('Ringtone set successfully: $songTitle at ${file.path}');
 
         if (mounted) {
           setState(() {
@@ -563,89 +395,41 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
             _trimDurationMs = 30000.0;
           });
         }
-      } else {
-        log('[SetRingtone] Failed: setRingtone returned false');
-        _showRingtoneErrorDialog();
-      }
-    } catch (e) {
-      log('[SetRingtone] Exception: $e');
-      _showRingtoneErrorDialog(error: e.toString());
-    }
-  }
-
-  void _showRingtoneErrorDialog({String? error}) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Failed to Set Ringtone'),
-        content: Text(
-          error != null
-              ? 'An error occurred: $error\n\nPlease try again or select a different audio file.'
-              : 'Could not set the ringtone. Please ensure you have granted the necessary permissions.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-          if (!_hasWritePermission)
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                _requestRingtonePermission();
-              },
-              child: const Text('Check Permissions'),
-            ),
-        ],
-      ),
+      },
+      onError: (e) {
+        log('Ringtone setting failed: $e');
+        toastFlutter(
+            toastmessage: "Failed to set ringtone: $e",
+            color: Colors.red[700]);
+      },
     );
   }
 
   void _processAndSetRingtone() async {
     if (_selectedFile == null || _selectedFileName == null) return;
 
-    // Final permission check
-    if (!_hasWritePermission) {
-      await _requestRingtonePermission();
-      if (!_hasWritePermission) return;
-    }
-
     setState(() => _isProcessing = true);
 
     File? tempTrimmedFile;
 
     try {
-      log('[Process] Starting trim operation...');
+      tempTrimmedFile =
+      await _trimAudioFile(_selectedFile!, _trimStartMs, _trimDurationMs);
+      log('Temporary trimmed file created at: ${tempTrimmedFile.path}');
 
-      // Trim the audio file
-      tempTrimmedFile = await _trimAudioFile(
-        _selectedFile!,
-        _trimStartMs,
-        _trimDurationMs,
-      );
-
-      log('[Process] Trim completed: ${tempTrimmedFile.path}');
-
-      // Delete previous temp ringtone if exists
       await _deletePreviousRingtoneFromDevice();
-
-      // Set the new ringtone
-      await _setRingtone(_selectedFileName!, tempTrimmedFile);
-
+      _setRingtone(_selectedFileName!, tempTrimmedFile);
     } catch (e) {
-      log('[Process] Error: $e');
+      log('Error during trim or set ringtone: $e');
       toastFlutter(
-        toastmessage: "Failed to process audio: ${e.toString()}",
-        color: Colors.red[700],
-      );
+          toastmessage: "Failed to set ringtone.", color: Colors.red[700]);
 
-      // Clean up temp file on error
       if (tempTrimmedFile != null && await tempTrimmedFile.exists()) {
         try {
           await tempTrimmedFile.delete();
-          log('[Process] Cleaned up temp file');
+          log('Cleaned up temporary trimmed file.');
         } catch (deleteError) {
-          log('[Process] Failed to delete temp file: $deleteError');
+          log('Failed to delete temp file: $deleteError');
         }
       }
     } finally {
@@ -655,8 +439,8 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
 
   void _handleTabSelected(int index) {
     if (index != _selectedTabIndex) {
-      _stopAllAudio();
-      log('[TabChange] From $_selectedTabIndex to $index');
+      _stopAllAudio(); // Stop all audio when changing tabs
+      log('Tab changed from $_selectedTabIndex to $index');
       setState(() {
         _selectedTabIndex = index;
         _selectedFile = null;
@@ -678,7 +462,7 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
     Map<String, Duration> durationMap;
 
     switch (_selectedTabIndex) {
-      case 0:
+      case 0: // All
         sourceList = [
           ...extractedAudiosFiles,
           ...mergedAudiosFiles,
@@ -687,22 +471,22 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
         sizeMap = appAudiosFileSizes;
         durationMap = appAudiosFileDurations;
         break;
-      case 1:
+      case 1: // Extracted
         sourceList = extractedAudiosFiles;
         sizeMap = appAudiosFileSizes;
         durationMap = appAudiosFileDurations;
         break;
-      case 2:
+      case 2: // Merged
         sourceList = mergedAudiosFiles;
         sizeMap = appAudiosFileSizes;
         durationMap = appAudiosFileDurations;
         break;
-      case 3:
+      case 3: // Converted
         sourceList = convertedAudiosFiles;
         sizeMap = appAudiosFileSizes;
         durationMap = appAudiosFileDurations;
         break;
-      case 4:
+      case 4: // Local
         sourceList = localMusicFiles;
         sizeMap = localMusicFileSizes;
         durationMap = localMusicFileDurations;
@@ -713,9 +497,17 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
         durationMap = {};
     }
 
+    // ✅ CRITICAL FIX: Add the currently set ringtone to the source list if it exists
+    // and is not already in the list. This ensures it's available for pinning,
+    // especially if it's a temporary file outside the scanned directories.
     if (_appSelectedRingtone != null && _appSelectedRingtoneName != null) {
+      // Only add if the selected tab is 'All' or a tab that could potentially contain the original file
+      // For simplicity and to guarantee visibility, we'll add it to all tabs for now.
+      // In a real app, you might restrict this, but for *showing* it, this is safest.
       if (!sourceList.any((file) => file.path == _appSelectedRingtone!.path)) {
         sourceList.insert(0, _appSelectedRingtone!);
+        // The size and duration maps rely on the file name being the key.
+        // We must add an entry for the temporary file's name.
         String currentFileName = _appSelectedRingtone!.path.split('/').last;
         if (!sizeMap.containsKey(currentFileName)) {
           sizeMap[currentFileName] = 'Current';
@@ -723,9 +515,11 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
         if (!durationMap.containsKey(currentFileName)) {
           durationMap[currentFileName] = Duration.zero;
         }
+        log('Injected current ringtone from path into sourceList for display.');
       }
     }
 
+    // Use the generic utility function to filter by search query and pin the selected ringtone.
     final filteredList = filterAndSortWithPinnedItem<File>(
       items: sourceList,
       searchQuery: _searchQuery,
@@ -733,6 +527,8 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
       pinnedItem: _appSelectedRingtone,
       comparePinnedItem: (item, pinnedItem) => item.path == pinnedItem.path,
     );
+
+    log('Filtered List size: ${filteredList.length}');
 
     return (filteredList, sizeMap, durationMap);
   }
@@ -887,12 +683,28 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
     String fileName = mp3File.path.split('/').last;
     String displayName = formatFileName(fileName, maxLength: 25);
 
+    // ✅ DEBUG: Print when a file is flagged as the current ringtone
+    if (isCurrentRingtone) {
+      log('DEBUG: Current Ringtone found and being displayed: $fileName');
+    }
+
+    // ✅ EXAGGERATED STYLING: Define unique styling properties for the current ringtone
     final Color itemColor =
     isCurrentRingtone ? Colors.yellow[50]! : Colors.white;
 
     final Color borderColor = isCurrentRingtone
         ? Colors.orange[800]!
         : (isSelected ? primaryColor : Colors.grey.withOpacity(0.5));
+
+    final List<BoxShadow> boxShadow = isCurrentRingtone
+        ? [
+      BoxShadow(
+        color: Colors.orange.withOpacity(0.4),
+        blurRadius: 8 * scaleFactor,
+        offset: Offset(0, 4 * scaleFactorHeight),
+      ),
+    ]
+        : [];
 
     return GestureDetector(
       onTap: () {
@@ -916,13 +728,14 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
             horizontal: 16 * scaleFactor, vertical: 6 * scaleFactorHeight),
         padding: EdgeInsets.all(12 * scaleFactor),
         decoration: BoxDecoration(
-          color: itemColor,
+          color: itemColor, // APPLIED YELLOW BACKGROUND COLOR
           borderRadius: BorderRadius.circular(12 * scaleFactor),
+          // boxShadow: boxShadow, // APPLIED STRONG SHADOW
           border: Border.all(
             color: borderColor,
             width: isCurrentRingtone || isSelected
                 ? 1.5 * scaleFactor
-                : 1 * scaleFactor,
+                : 1 * scaleFactor, // VERY THICK BORDER
           ),
         ),
         child: Row(
@@ -941,7 +754,9 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
                 ),
               ),
               child: Icon(
-                  isCurrentRingtone ? Icons.ring_volume : Icons.audio_file,
+                  isCurrentRingtone
+                      ? Icons.ring_volume
+                      : Icons.audio_file, // Star icon instead of checkmark
                   color: Colors.white,
                   size: 28 * scaleFactor),
             ),
@@ -954,16 +769,19 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
                     children: [
                       Expanded(
                         child: Text(
-                          isCurrentRingtone ? 'Current Ringtone' : displayName,
+                          isCurrentRingtone
+                              ? 'Current Ringtone'
+                              : displayName, // Clear label
                           maxLines: 1,
                           softWrap: false,
+
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 15 * scaleFactor * textScaleFactor,
-                            fontWeight: FontWeight.w500,
+                            fontWeight: FontWeight.w900, // VERY BOLD FONT
                             color: isCurrentRingtone
                                 ? Colors.deepOrange
-                                : Colors.black87,
+                                : Colors.black87, // ORANGE TEXT
                           ),
                         ),
                       ),
@@ -976,20 +794,22 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
                           ),
                           decoration: BoxDecoration(
                             color: Colors.orange[50],
-                            borderRadius: BorderRadius.circular(8 * scaleFactor),
+                            borderRadius:
+                            BorderRadius.circular(8 * scaleFactor),
                             border: Border.all(color: Colors.orange, width: 1),
                           ),
                           child: Text(
-                            'PINNED',
+                            'PINNED', // Unmistakable tag
                             style: TextStyle(
                               fontSize: 10 * scaleFactor * textScaleFactor,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.w700,
                               color: Colors.orange[800],
                             ),
                           ),
                         ),
                     ],
                   ),
+                  SizedBox(height: 4 * scaleFactorHeight),
                   SizedBox(height: 4 * scaleFactorHeight),
                   Text(
                     isCurrentRingtone
@@ -1003,13 +823,14 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
                           ? Colors.orange[700]
                           : Colors.grey[600],
                       fontWeight: isCurrentRingtone
-                          ? FontWeight.w500
+                          ? FontWeight.w600
                           : FontWeight.normal,
                     ),
                   ),
                 ],
               ),
             ),
+            // Play/Pause button for the current ringtone
             if (isCurrentRingtone)
               StreamBuilder<PlayerState>(
                 stream: _listAudioPlayer.playerStateStream,
@@ -1018,9 +839,9 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
                   final playing = playerState?.playing ?? false;
                   final processingState = playerState?.processingState;
 
-                  final isPlayingThisFile =
-                      _listAudioPlayer.audioSource?.sequence.first.tag ==
-                          mp3File.path;
+                  final isPlayingThisFile = _listAudioPlayer
+                      .audioSource?.sequence.first.tag ==
+                      mp3File.path;
 
                   final showPause = playing &&
                       processingState != ProcessingState.completed &&
