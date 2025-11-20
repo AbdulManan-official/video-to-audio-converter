@@ -16,6 +16,7 @@ import '../../controllers/video_controller.dart';
 import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
 import 'package:path/path.dart' as p;
 import '../../utils/search_filter_bar.dart';
+import '../../utils/responsive_helper.dart';
 
 const Color secondaryColor = Color(0xFF6C63FF);
 const Color primaryColor = Color(0xFF6C63FF);
@@ -32,9 +33,9 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
   String _searchQuery = '';
   bool _isFetchingFiles = false;
   bool _isFetchingLocalFiles = false;
-  bool _hasLoadedOnce = false;
   File? _appSelectedRingtone;
   String? _appSelectedRingtoneName;
+  bool _localMusicPermissionGranted = false;
 
   // Selection tracking
   File? _selectedFile;
@@ -87,17 +88,13 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
 
   Future<void> _initializePermissionsAndRingtone() async {
     try {
-      // Get Android SDK version
       final deviceInfo = DeviceInfoPlugin();
       final androidInfo = await deviceInfo.androidInfo;
       _androidSdkVersion = androidInfo.version.sdkInt;
 
       log('[Init] Android SDK Version: $_androidSdkVersion');
 
-      // Check and request permissions
       await _requestRingtonePermission();
-
-      // Load saved ringtone
       await _loadAppSelectedRingtone();
     } catch (e) {
       log('[Init] Error during initialization: $e');
@@ -156,13 +153,19 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
   }
 
   void _showPermissionDeniedDialog() {
+    final r = ResponsiveHelper(context);
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Permission Required'),
-        content: const Text(
+        title: Text(
+          'Permission Required',
+          style: TextStyle(fontSize: r.fs(16)),
+        ),
+        content: Text(
           'This app needs permission to modify system settings to set ringtones. '
               'Please grant the permission in the next screen.',
+          style: TextStyle(fontSize: r.fs(14)),
         ),
         actions: [
           TextButton(
@@ -170,14 +173,14 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
               Navigator.pop(context);
               Navigator.pop(context);
             },
-            child: const Text('Cancel'),
+            child: Text('Cancel', style: TextStyle(fontSize: r.fs(14))),
           ),
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
               await _requestRingtonePermission();
             },
-            child: const Text('Grant Permission'),
+            child: Text('Grant Permission', style: TextStyle(fontSize: r.fs(14))),
           ),
         ],
       ),
@@ -216,6 +219,7 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
       _appSelectedRingtone = null;
       _appSelectedRingtoneName = null;
     });
+    log('[ClearPrefs] All ringtone preferences cleared');
   }
 
   Future<void> _deletePreviousRingtoneFromDevice() async {
@@ -225,7 +229,6 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
       final path = _appSelectedRingtone!.path;
       final file = File(path);
 
-      // Only delete if it's in the Ringtones directory (our created files)
       if (path.contains('/Music/Ringtones/') && path.contains('_ringtone_')) {
         if (await file.exists()) {
           await file.delete();
@@ -239,7 +242,6 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
     }
   }
 
-  // --- STOP ALL AUDIO PLAYBACK ---
   void _stopAllAudio() {
     _audioPlayer.stop();
     _listAudioPlayer.stop();
@@ -247,18 +249,14 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
   }
 
   Future<void> _playAudio(File audioFile) async {
-    // Check if we're already playing this specific file
     final isPlayingThisFile = _listAudioPlayer.playing &&
         _listAudioPlayer.audioSource?.sequence.first.tag == audioFile.path;
 
     if (isPlayingThisFile) {
-      // If playing this file, stop it
       await _listAudioPlayer.stop();
     } else {
-      // Stop all other audio first
       _stopAllAudio();
 
-      // Then play the new file
       try {
         await _listAudioPlayer.setFilePath(audioFile.path, tag: audioFile.path);
         await _listAudioPlayer.play();
@@ -297,7 +295,6 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
     if (mounted) {
       setState(() {
         _isFetchingFiles = false;
-        _hasLoadedOnce = true;
       });
     }
   }
@@ -316,34 +313,130 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
     }
   }
 
-  Future<void> _fetchLocalAudioFiles() async {
-    if (localMusicFiles.isNotEmpty) return;
+  // COMPLETELY REWRITTEN: Simplified local file fetching
+  Future<void> _fetchLocalAudioFiles({bool forcePermissionCheck = false}) async {
+    log('═══════════════════════════════════════════════════');
+    log('[LOCAL FETCH] STARTING LOCAL FILE SCAN');
+    log('═══════════════════════════════════════════════════');
 
-    if (mounted) {
+    setState(() {
+      _isFetchingLocalFiles = true;
+      _localMusicPermissionGranted = true; // Always set to true
+    });
+
+    try {
+      // Clear previous data
+      localMusicFiles.clear();
+      localMusicFileSizes.clear();
+      localMusicFileDurations.clear();
+
+      log('[LOCAL FETCH] Cleared previous local file data');
+
+      // Define EXACT paths to exclude (case-insensitive comparison)
+      final List<String> excludePaths = [
+        '/storage/emulated/0/music/videomusic',
+        '/storage/emulated/0/music/mergedaudio',
+        '/storage/emulated/0/music/format converter',
+        '/storage/emulated/0/music/ringtones',
+      ];
+
+      log('[LOCAL FETCH] Excluded paths: $excludePaths');
+
+      // Define directories to search
+      final List<Directory> searchDirs = [
+        Directory('/storage/emulated/0/Music'),
+        Directory('/storage/emulated/0/Download'),
+        Directory('/storage/emulated/0/Audio'),
+      ];
+
+      int totalFilesFound = 0;
+      List<File> allFoundFiles = [];
+
+      // Scan each directory
+      for (Directory searchDir in searchDirs) {
+        log('[LOCAL FETCH] ───────────────────────────────────────');
+        log('[LOCAL FETCH] Scanning: ${searchDir.path}');
+
+        if (!await searchDir.exists()) {
+          log('[LOCAL FETCH] ✗ Directory does not exist');
+          continue;
+        }
+
+        log('[LOCAL FETCH] ✓ Directory exists, starting recursive scan...');
+
+        try {
+          await for (FileSystemEntity entity in searchDir.list(recursive: true, followLinks: false)) {
+            if (entity is File) {
+              String filePath = entity.path;
+              String filePathLower = filePath.toLowerCase();
+
+              // Check if it's an audio file
+              if (filePathLower.endsWith('.mp3') ||
+                  filePathLower.endsWith('.m4a') ||
+                  filePathLower.endsWith('.wav') ||
+                  filePathLower.endsWith('.aac') ||
+                  filePathLower.endsWith('.flac') ||
+                  filePathLower.endsWith('.ogg')) {
+
+                // Check if file is in excluded directory
+                bool isExcluded = false;
+                for (String excludePath in excludePaths) {
+                  if (filePathLower.contains(excludePath)) {
+                    isExcluded = true;
+                    break;
+                  }
+                }
+
+                if (!isExcluded) {
+                  allFoundFiles.add(entity);
+                  totalFilesFound++;
+                  log('[LOCAL FETCH] ✓ Found: $filePath');
+                }
+              }
+            }
+          }
+        } catch (e) {
+          log('[LOCAL FETCH] ✗ Error scanning ${searchDir.path}: $e');
+        }
+      }
+
+      log('[LOCAL FETCH] ───────────────────────────────────────');
+      log('[LOCAL FETCH] SCAN COMPLETE');
+      log('[LOCAL FETCH] Total audio files found: $totalFilesFound');
+      log('[LOCAL FETCH] ───────────────────────────────────────');
+
+      // Update state with found files
       setState(() {
-        _isFetchingLocalFiles = true;
+        localMusicFiles = allFoundFiles;
+        _isFetchingLocalFiles = false;
+      });
+
+      log('[LOCAL FETCH] State updated with ${allFoundFiles.length} files');
+
+      // Load metadata for found files
+      if (allFoundFiles.isNotEmpty) {
+        log('[LOCAL FETCH] Loading metadata...');
+        _loadFileInfoInBackground(
+          allFoundFiles,
+          localMusicFileSizes,
+          localMusicFileDurations,
+        );
+      }
+
+    } catch (e, stackTrace) {
+      log('[LOCAL FETCH] ✗✗✗ CRITICAL ERROR ✗✗✗');
+      log('[LOCAL FETCH] Error: $e');
+      log('[LOCAL FETCH] Stack trace: $stackTrace');
+
+      setState(() {
+        localMusicFiles.clear();
+        _isFetchingLocalFiles = false;
       });
     }
 
-    try {
-      await mergeController.fetchMp3Files();
-      localMusicFiles = mergeController.mp3Files;
-      _loadFileInfoInBackground(
-          localMusicFiles, localMusicFileSizes, localMusicFileDurations);
-
-      if (mounted) {
-        setState(() {
-          _isFetchingLocalFiles = false;
-        });
-      }
-    } catch (e) {
-      log('[FetchLocal] Error: $e');
-      if (mounted) {
-        setState(() {
-          _isFetchingLocalFiles = false;
-        });
-      }
-    }
+    log('═══════════════════════════════════════════════════');
+    log('[LOCAL FETCH] LOCAL FILE SCAN FINISHED');
+    log('═══════════════════════════════════════════════════');
   }
 
   void _loadFileInfoInBackground(List<File> files, Map<String, String> sizesMap,
@@ -351,11 +444,16 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
     for (File file in files) {
       String fileName = file.path.split('/').last;
 
+      // Load file size
       file.length().then((bytes) {
         sizesMap[fileName] = _formatBytes(bytes);
         if (mounted) setState(() {});
+      }).catchError((e) {
+        log('[LoadFileInfo] Error loading size for $fileName: $e');
+        sizesMap[fileName] = 'Unknown';
       });
 
+      // Load duration if not already loaded
       if (durationsMap[fileName] == null) {
         _loadDurationAsync(file, fileName, durationsMap);
       }
@@ -402,11 +500,8 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
     final start = startMs / 1000;
     final duration = durationMs / 1000;
 
-    // CRITICAL: Must save to external storage, not app cache!
-    // Android requires ringtone files to be in /storage/emulated/0/
     final externalDir = Directory('/storage/emulated/0/Music/Ringtones');
 
-    // Create directory if it doesn't exist
     if (!await externalDir.exists()) {
       await externalDir.create(recursive: true);
       log('[TrimAudio] Created Ringtones directory');
@@ -448,20 +543,17 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
 
   Future<bool> _verifyFileForRingtone(File file) async {
     try {
-      // Check if file exists
       if (!await file.exists()) {
         log('[VerifyFile] File does not exist: ${file.path}');
         return false;
       }
 
-      // Check file size
       final fileSize = await file.length();
       if (fileSize == 0) {
         log('[VerifyFile] File is empty');
         return false;
       }
 
-      // Check if file is readable
       final bytes = await file.readAsBytes();
       if (bytes.isEmpty) {
         log('[VerifyFile] Cannot read file');
@@ -480,7 +572,6 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
     log('[SetRingtone] Starting process for: $songTitle');
     log('[SetRingtone] File path: ${file.path}');
 
-    // Verify the file is in external storage
     if (!file.path.startsWith('/storage/emulated/0/')) {
       log('[SetRingtone] Error: File not in external storage');
       toastFlutter(
@@ -490,7 +581,6 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
       return;
     }
 
-    // Verify file before attempting to set
     final isValid = await _verifyFileForRingtone(file);
     if (!isValid) {
       toastFlutter(
@@ -500,7 +590,6 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
       return;
     }
 
-    // Check permission again before setting
     if (!_hasWritePermission) {
       log('[SetRingtone] No write permission');
       toastFlutter(
@@ -514,43 +603,30 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
     try {
       log('[SetRingtone] Calling RingtoneSetMul.setRingtone()...');
 
-      // Get Android SDK version to use appropriate method
-      final deviceInfo = DeviceInfoPlugin();
-      final androidInfo = await deviceInfo.androidInfo;
-      final sdkInt = androidInfo.version.sdkInt;
-
-      log('[SetRingtone] Android SDK: $sdkInt');
-
-      bool success = false;
-
-      if (sdkInt >= 29) {
-        // Android 10 and above - use RingtoneSetter
-        success = await RingtoneSetMul.setRingtone(
-          file.path,
-          mimeType: 'audio/mpeg',
-        );
-      } else {
-        // Android 9 and below - use RingtoneSet
-        success = await RingtoneSetMul.setRingtone(
-          file.path,
-          mimeType: 'audio/mpeg',
-        );
-      }
+      bool success = await RingtoneSetMul.setRingtone(
+        file.path,
+        mimeType: 'audio/mpeg',
+      );
 
       log('[SetRingtone] Result: $success');
 
       if (success) {
-        // Save preferences
+        log('[SetRingtone] Clearing all previous ringtone preferences');
+        await _clearRingtonePreferences();
+
+        await Future.delayed(const Duration(milliseconds: 100));
+
         await Prefs.setBool('rintone_set', true);
         await Prefs.setString('ringtone_string', songTitle);
         await Prefs.setString('ringtone_path', file.path);
+
+        log('[SetRingtone] New preferences saved - Path: ${file.path}');
+        log('[SetRingtone] New preferences saved - Name: $songTitle');
 
         toastFlutter(
           toastmessage: '$songTitle ringtone set successfully',
           color: Colors.green[700],
         );
-
-        log('[SetRingtone] Success: $songTitle at ${file.path}');
 
         if (mounted) {
           setState(() {
@@ -563,6 +639,11 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
             _trimDurationMs = 30000.0;
           });
         }
+
+        await Future.delayed(const Duration(milliseconds: 200));
+        if (mounted) {
+          setState(() {});
+        }
       } else {
         log('[SetRingtone] Failed: setRingtone returned false');
         _showRingtoneErrorDialog();
@@ -574,19 +655,25 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
   }
 
   void _showRingtoneErrorDialog({String? error}) {
+    final r = ResponsiveHelper(context);
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Failed to Set Ringtone'),
+        title: Text(
+          'Failed to Set Ringtone',
+          style: TextStyle(fontSize: r.fs(16)),
+        ),
         content: Text(
           error != null
               ? 'An error occurred: $error\n\nPlease try again or select a different audio file.'
               : 'Could not set the ringtone. Please ensure you have granted the necessary permissions.',
+          style: TextStyle(fontSize: r.fs(14)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
+            child: Text('OK', style: TextStyle(fontSize: r.fs(14))),
           ),
           if (!_hasWritePermission)
             ElevatedButton(
@@ -594,7 +681,7 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
                 Navigator.pop(context);
                 _requestRingtonePermission();
               },
-              child: const Text('Check Permissions'),
+              child: Text('Check Permissions', style: TextStyle(fontSize: r.fs(14))),
             ),
         ],
       ),
@@ -604,7 +691,6 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
   void _processAndSetRingtone() async {
     if (_selectedFile == null || _selectedFileName == null) return;
 
-    // Final permission check
     if (!_hasWritePermission) {
       await _requestRingtonePermission();
       if (!_hasWritePermission) return;
@@ -617,7 +703,6 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
     try {
       log('[Process] Starting trim operation...');
 
-      // Trim the audio file
       tempTrimmedFile = await _trimAudioFile(
         _selectedFile!,
         _trimStartMs,
@@ -626,12 +711,9 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
 
       log('[Process] Trim completed: ${tempTrimmedFile.path}');
 
-      // Delete previous temp ringtone if exists
       await _deletePreviousRingtoneFromDevice();
 
-      // Set the new ringtone
       await _setRingtone(_selectedFileName!, tempTrimmedFile);
-
     } catch (e) {
       log('[Process] Error: $e');
       toastFlutter(
@@ -639,7 +721,6 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
         color: Colors.red[700],
       );
 
-      // Clean up temp file on error
       if (tempTrimmedFile != null && await tempTrimmedFile.exists()) {
         try {
           await tempTrimmedFile.delete();
@@ -654,9 +735,13 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
   }
 
   void _handleTabSelected(int index) {
+    log('═══════════════════════════════════════════════════');
+    log('[TAB CHANGE] User selected tab index: $index');
+    log('[TAB CHANGE] Previous tab index: $_selectedTabIndex');
+    log('═══════════════════════════════════════════════════');
+
     if (index != _selectedTabIndex) {
       _stopAllAudio();
-      log('[TabChange] From $_selectedTabIndex to $index');
       setState(() {
         _selectedTabIndex = index;
         _selectedFile = null;
@@ -666,16 +751,22 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
       });
     }
 
-    if (index == 4 && localMusicFiles.isEmpty) {
-      _fetchLocalAudioFiles();
+    // When Local tab (index 4) is selected
+    if (index == 4) {
+      log('[TAB CHANGE] Local tab selected - triggering file fetch');
+      log('[TAB CHANGE] Current local files count: ${localMusicFiles.length}');
+      _fetchLocalAudioFiles(forcePermissionCheck: true);
     }
   }
 
+  // SIMPLIFIED: Get current filtered data - INCLUDES CURRENT RINGTONE IN LOCAL TAB
   (List<File>, Map<String, String>, Map<String, Duration>)
   _getCurrentFilteredData() {
     List<File> sourceList;
     Map<String, String> sizeMap;
     Map<String, Duration> durationMap;
+
+    log('[GET DATA] Getting data for tab index: $_selectedTabIndex');
 
     switch (_selectedTabIndex) {
       case 0:
@@ -703,9 +794,43 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
         durationMap = appAudiosFileDurations;
         break;
       case 4:
-        sourceList = localMusicFiles;
+        sourceList = List<File>.from(localMusicFiles); // Create copy
         sizeMap = localMusicFileSizes;
         durationMap = localMusicFileDurations;
+        log('[GET DATA] Local tab - Files count: ${sourceList.length}');
+
+        // CRITICAL: For Local tab, ALWAYS include current ringtone if it exists
+        if (_appSelectedRingtone != null &&
+            _appSelectedRingtoneName != null &&
+            _appSelectedRingtone!.path.isNotEmpty) {
+
+          // Check if ringtone file exists
+          if (File(_appSelectedRingtone!.path).existsSync()) {
+            // Check if it's in Ringtones folder (our created ringtone)
+            if (_appSelectedRingtone!.path.toLowerCase().contains('/music/ringtones/')) {
+              // Remove duplicate if exists
+              sourceList.removeWhere((file) => file.path == _appSelectedRingtone!.path);
+
+              // Add at beginning
+              sourceList.insert(0, _appSelectedRingtone!);
+
+              String currentFileName = _appSelectedRingtone!.path.split('/').last;
+              if (!sizeMap.containsKey(currentFileName)) {
+                sizeMap[currentFileName] = 'Current';
+              }
+              if (!durationMap.containsKey(currentFileName)) {
+                durationMap[currentFileName] = Duration.zero;
+              }
+
+              log('[GET DATA] Added current ringtone to Local tab: ${_appSelectedRingtone!.path}');
+            } else {
+              log('[GET DATA] Current ringtone already in local list (not in Ringtones folder)');
+            }
+          } else {
+            log('[GET DATA] Current ringtone file no longer exists');
+            _clearRingtonePreferences();
+          }
+        }
         break;
       default:
         sourceList = [];
@@ -713,9 +838,15 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
         durationMap = {};
     }
 
-    if (_appSelectedRingtone != null && _appSelectedRingtoneName != null) {
-      if (!sourceList.any((file) => file.path == _appSelectedRingtone!.path)) {
+    // Handle current ringtone pinning for other tabs (not Local)
+    if (_selectedTabIndex != 4 &&
+        _appSelectedRingtone != null &&
+        _appSelectedRingtoneName != null &&
+        _appSelectedRingtone!.path.isNotEmpty) {
+      if (File(_appSelectedRingtone!.path).existsSync()) {
+        sourceList.removeWhere((file) => file.path == _appSelectedRingtone!.path);
         sourceList.insert(0, _appSelectedRingtone!);
+
         String currentFileName = _appSelectedRingtone!.path.split('/').last;
         if (!sizeMap.containsKey(currentFileName)) {
           sizeMap[currentFileName] = 'Current';
@@ -723,38 +854,44 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
         if (!durationMap.containsKey(currentFileName)) {
           durationMap[currentFileName] = Duration.zero;
         }
+      } else {
+        _clearRingtonePreferences();
       }
     }
 
-    final filteredList = filterAndSortWithPinnedItem<File>(
-      items: sourceList,
-      searchQuery: _searchQuery,
-      getItemName: (file) => file.path.split('/').last,
-      pinnedItem: _appSelectedRingtone,
-      comparePinnedItem: (item, pinnedItem) => item.path == pinnedItem.path,
-    );
+    // Apply search filter
+    final lowerCaseQuery = _searchQuery.toLowerCase();
+    final filteredList = sourceList.where((file) {
+      final fileName = file.path.split('/').last.toLowerCase();
+      return fileName.contains(lowerCaseQuery);
+    }).toList();
+
+    log('[GET DATA] Filtered list count: ${filteredList.length}');
 
     return (filteredList, sizeMap, durationMap);
   }
 
-  Widget _buildRingtoneList(double scaleFactor, double scaleFactorHeight,
-      double textScaleFactor) {
+  Widget _buildRingtoneList() {
+    final r = ResponsiveHelper(context);
+
+    // Handle local files loading state
     if (_selectedTabIndex == 4 && _isFetchingLocalFiles) {
       return SliverFillRemaining(
         hasScrollBody: false,
         child: Center(
           child: Padding(
-            padding: EdgeInsets.all(32 * scaleFactor),
+            padding: EdgeInsets.all(r.w(32)),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                CircularProgressIndicator(strokeWidth: 2 * scaleFactor),
-                SizedBox(height: 16 * scaleFactorHeight),
+                CircularProgressIndicator(strokeWidth: r.w(2)),
+                SizedBox(height: r.h(16)),
                 Text(
                   'Scanning local audio files...',
                   style: TextStyle(
-                      fontSize: 14 * scaleFactor * textScaleFactor,
-                      color: Colors.grey[600]),
+                    fontSize: r.fs(14),
+                    color: Colors.grey[600],
+                  ),
                 ),
               ],
             ),
@@ -796,19 +933,24 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
           color: Colors.grey[100],
           child: Center(
             child: Padding(
-              padding: EdgeInsets.all(40.0 * scaleFactor),
+              padding: EdgeInsets.all(r.w(40)),
               child: Column(
                 children: [
-                  Icon(Icons.audio_file_outlined,
-                      size: 64 * scaleFactor, color: Colors.grey[400]),
-                  SizedBox(height: 16 * scaleFactorHeight),
+                  Icon(
+                    Icons.audio_file_outlined,
+                    size: r.w(64),
+                    color: Colors.grey[400],
+                  ),
+                  SizedBox(height: r.h(16)),
                   Text(
                     message,
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                        fontSize: 16 * scaleFactor * textScaleFactor,
-                        color: Colors.grey[600]),
+                      fontSize: r.fs(16),
+                      color: Colors.grey[600],
+                    ),
                   ),
+
                 ],
               ),
             ),
@@ -822,17 +964,18 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
         hasScrollBody: false,
         child: Center(
           child: Padding(
-            padding: EdgeInsets.all(32 * scaleFactor),
+            padding: EdgeInsets.all(r.w(32)),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                CircularProgressIndicator(strokeWidth: 2 * scaleFactor),
-                SizedBox(height: 16 * scaleFactorHeight),
+                CircularProgressIndicator(strokeWidth: r.w(2)),
+                SizedBox(height: r.h(16)),
                 Text(
                   'Loading audio files...',
                   style: TextStyle(
-                      fontSize: 14 * scaleFactor * textScaleFactor,
-                      color: Colors.grey[600]),
+                    fontSize: r.fs(14),
+                    color: Colors.grey[600],
+                  ),
                 ),
               ],
             ),
@@ -842,16 +985,17 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
     }
 
     return SliverPadding(
-      padding: EdgeInsets.only(bottom: 16 * scaleFactorHeight),
+      padding: EdgeInsets.only(bottom: r.h(16)),
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate(
               (context, index) {
             File mp3File = filteredList[index];
             String fileName = mp3File.path.split('/').last;
 
+            final bool isCurrentRingtone = _appSelectedRingtone != null &&
+                _appSelectedRingtone!.path == mp3File.path;
+
             final bool isSelected = (_selectedFile?.path == mp3File.path);
-            final bool isCurrentRingtone =
-            (_appSelectedRingtone?.path == mp3File.path);
 
             return _buildFileListItem(
               mp3File: mp3File,
@@ -862,9 +1006,6 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
               duration: durationMap[fileName] != null
                   ? _formatDuration(durationMap[fileName]!)
                   : '...',
-              scaleFactor: scaleFactor,
-              scaleFactorHeight: scaleFactorHeight,
-              textScaleFactor: textScaleFactor,
             );
           },
           childCount: filteredList.length,
@@ -880,10 +1021,8 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
     required bool isCurrentRingtone,
     required String fileSize,
     required String duration,
-    required double scaleFactor,
-    required double scaleFactorHeight,
-    required double textScaleFactor,
   }) {
+    final r = ResponsiveHelper(context);
     String fileName = mp3File.path.split('/').last;
     String displayName = formatFileName(fileName, maxLength: 25);
 
@@ -912,26 +1051,23 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
         );
       },
       child: Container(
-        margin: EdgeInsets.symmetric(
-            horizontal: 16 * scaleFactor, vertical: 6 * scaleFactorHeight),
-        padding: EdgeInsets.all(12 * scaleFactor),
+        margin: EdgeInsets.symmetric(horizontal: r.w(16), vertical: r.h(6)),
+        padding: EdgeInsets.all(r.w(12)),
         decoration: BoxDecoration(
           color: itemColor,
-          borderRadius: BorderRadius.circular(12 * scaleFactor),
+          borderRadius: BorderRadius.circular(r.w(12)),
           border: Border.all(
             color: borderColor,
-            width: isCurrentRingtone || isSelected
-                ? 1.5 * scaleFactor
-                : 1 * scaleFactor,
+            width: isCurrentRingtone || isSelected ? r.w(1.5) : r.w(1),
           ),
         ),
         child: Row(
           children: [
             Container(
-              width: 50 * scaleFactor,
-              height: 50 * scaleFactor,
+              width: r.w(50),
+              height: r.w(50),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10 * scaleFactor),
+                borderRadius: BorderRadius.circular(r.w(10)),
                 gradient: LinearGradient(
                   colors: isCurrentRingtone
                       ? [Colors.orange, Colors.deepOrange]
@@ -943,9 +1079,9 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
               child: Icon(
                   isCurrentRingtone ? Icons.ring_volume : Icons.audio_file,
                   color: Colors.white,
-                  size: 28 * scaleFactor),
+                  size: r.w(28)),
             ),
-            SizedBox(width: 12 * scaleFactor),
+            SizedBox(width: r.w(12)),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -959,7 +1095,7 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
                           softWrap: false,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: 15 * scaleFactor * textScaleFactor,
+                            fontSize: r.fs(15),
                             fontWeight: FontWeight.w500,
                             color: isCurrentRingtone
                                 ? Colors.deepOrange
@@ -969,20 +1105,20 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
                       ),
                       if (isCurrentRingtone)
                         Container(
-                          margin: EdgeInsets.only(left: 8 * scaleFactor),
+                          margin: EdgeInsets.only(left: r.w(8)),
                           padding: EdgeInsets.symmetric(
-                            horizontal: 8 * scaleFactor,
-                            vertical: 2 * scaleFactorHeight,
+                            horizontal: r.w(8),
+                            vertical: r.h(2),
                           ),
                           decoration: BoxDecoration(
                             color: Colors.orange[50],
-                            borderRadius: BorderRadius.circular(8 * scaleFactor),
+                            borderRadius: BorderRadius.circular(r.w(8)),
                             border: Border.all(color: Colors.orange, width: 1),
                           ),
                           child: Text(
                             'PINNED',
                             style: TextStyle(
-                              fontSize: 10 * scaleFactor * textScaleFactor,
+                              fontSize: r.fs(10),
                               fontWeight: FontWeight.w600,
                               color: Colors.orange[800],
                             ),
@@ -990,15 +1126,13 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
                         ),
                     ],
                   ),
-                  SizedBox(height: 4 * scaleFactorHeight),
+                  SizedBox(height: r.h(4)),
                   Text(
                     isCurrentRingtone
                         ? "File: ${_appSelectedRingtoneName != null && _appSelectedRingtoneName!.length > 20 ? _appSelectedRingtoneName!.substring(0, 20) + '...' : (_appSelectedRingtoneName ?? 'N/A')}"
                         : "$fileSize • $duration",
                     style: TextStyle(
-                      fontSize: isCurrentRingtone
-                          ? 13 * scaleFactor * textScaleFactor
-                          : 12 * scaleFactor * textScaleFactor,
+                      fontSize: isCurrentRingtone ? r.fs(13) : r.fs(12),
                       color: isCurrentRingtone
                           ? Colors.orange[700]
                           : Colors.grey[600],
@@ -1032,7 +1166,7 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
                           ? Icons.pause_circle_filled
                           : Icons.play_circle_fill,
                       color: Colors.orange[700],
-                      size: 34 * scaleFactor,
+                      size: r.w(34),
                     ),
                     onPressed: () => _playAudio(mp3File),
                   );
@@ -1045,68 +1179,71 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
   }
 
   Widget _buildSelectedItemWidget() {
-    return SliverToBoxAdapter(
-      child: Container(
-        margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    "Edit Selected Audio",
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: Colors.black87,
-                    ),
+    if (_selectedFile == null) {
+      return const SizedBox.shrink();
+    }
+
+    final r = ResponsiveHelper(context);
+
+    return Container(
+      margin: EdgeInsets.fromLTRB(r.w(12), r.h(12), r.w(12), 0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(r.w(10)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: EdgeInsets.fromLTRB(r.w(16), r.h(12), r.w(16), r.h(8)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Edit Selected Audio",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: r.fs(16),
+                    color: Colors.black87,
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    formatFileName(_selectedFileName, maxLength: 25),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: Colors.grey[700], fontSize: 13),
+                ),
+                SizedBox(height: r.h(4)),
+                Text(
+                  formatFileName(_selectedFileName ?? "", maxLength: 25),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.grey[700],
+                    fontSize: r.fs(13),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            TrimAudioWidget(
-              key: _trimAudioKey,
-              audioFile: _selectedFile!,
-              onTrimmed: (startMs, durationMs) {
-                if (mounted) {
-                  setState(() {
-                    _trimStartMs = startMs;
-                    _trimDurationMs = durationMs;
-                  });
-                }
-              },
-              onAudioPlayStarted: () {
-                _audioPlayer.stop();
-                _listAudioPlayer.stop();
-              },
-            ),
-          ],
-        ),
+          ),
+          TrimAudioWidget(
+            key: _trimAudioKey,
+            audioFile: _selectedFile!,
+            onTrimmed: (startMs, durationMs) {
+              if (mounted) {
+                setState(() {
+                  _trimStartMs = startMs;
+                  _trimDurationMs = durationMs;
+                });
+              }
+            },
+            onAudioPlayStarted: () {
+              _audioPlayer.stop();
+              _listAudioPlayer.stop();
+            },
+          ),
+        ],
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final mediaQuery = MediaQuery.of(context);
-    const double referenceWidth = 375.0;
-    final double scaleFactor = mediaQuery.size.width / referenceWidth;
-    final double scaleFactorHeight = mediaQuery.size.height / 812.0;
-    final double textScaleFactor = mediaQuery.textScaleFactor;
+    final r = ResponsiveHelper(context);
 
     return Scaffold(
       backgroundColor: Colors.grey[100],
@@ -1115,39 +1252,57 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
         elevation: 0,
         centerTitle: false,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back,
-              color: Colors.black, size: 24 * scaleFactor),
+          icon: Icon(
+            Icons.arrow_back,
+            color: Colors.black,
+            size: r.w(24),
+          ),
           onPressed: () {
             _stopAllAudio();
             Navigator.pop(context);
           },
         ),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "Set Ringtone",
-              style: TextStyle(
+        title: Padding(
+          padding: EdgeInsets.only(left: r.isTablet() ? r.w(16) : 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                "Set Ringtone",
+                style: TextStyle(
                   color: Colors.black,
-                  fontSize: 18 * scaleFactor * textScaleFactor,
-                  fontWeight: FontWeight.w600),
-            ),
-            SizedBox(height: 2 * scaleFactorHeight),
-            Text(
-              'Create custom ringtones',
-              style: TextStyle(
-                  fontSize: 13 * scaleFactor * textScaleFactor,
+                  fontSize: r.fs(18),
+                  fontWeight: FontWeight.w600,
+                  height: 1.2,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              SizedBox(height: r.h(2)),
+              Text(
+                'Create custom ringtones',
+                style: TextStyle(
+                  fontSize: r.fs(13),
                   color: Colors.grey[600],
-                  fontWeight: FontWeight.w400),
-            ),
-          ],
+                  fontWeight: FontWeight.w400,
+                  height: 1.2,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
         ),
-        iconTheme: IconThemeData(color: Colors.black, size: 24 * scaleFactor),
+        toolbarHeight: r.h(70),
         actions: [
           if (_ringtoneSetSuccessfully)
             IconButton(
-              icon:
-              Icon(Icons.home, color: Colors.black, size: 24 * scaleFactor),
+              icon: Icon(
+                Icons.home,
+                color: Colors.black,
+                size: r.w(24),
+              ),
               onPressed: () {
                 _stopAllAudio();
                 Get.offAll(() => const HomeScreen());
@@ -1162,8 +1317,9 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
               slivers: [
                 SliverToBoxAdapter(
                   child: buildGenericSearchBar(
-                    scaleFactor: scaleFactor,
-                    textScaleFactor: textScaleFactor,
+                    scaleFactor: r.scaleWidth,
+                    textScaleFactor: r.textScaleFactor,
+                    context: context,
                     onSearchQueryChanged: (value) {
                       if (mounted) {
                         _stopAllAudio();
@@ -1171,7 +1327,6 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
                           _searchQuery = value.toLowerCase();
                           _selectedFile = null;
                           _selectedFileName = null;
-                          log('Search query updated: $_searchQuery');
                         });
                       }
                     },
@@ -1180,9 +1335,10 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
                 ),
                 SliverToBoxAdapter(
                   child: buildGenericFilterTabs(
-                    scaleFactor: scaleFactor,
-                    scaleFactorHeight: scaleFactorHeight,
-                    textScaleFactor: textScaleFactor,
+                    scaleFactor: r.scaleWidth,
+                    scaleFactorHeight: r.scaleHeight,
+                    textScaleFactor: r.textScaleFactor,
+                    context: context,
                     selectedTabIndex: _selectedTabIndex,
                     onTabSelected: _handleTabSelected,
                     tabLabels: const [
@@ -1194,12 +1350,18 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
                     ],
                   ),
                 ),
-                if (_selectedFile != null) _buildSelectedItemWidget(),
+                if (_selectedFile != null)
+                  SliverToBoxAdapter(
+                    child: _buildSelectedItemWidget(),
+                  ),
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: EdgeInsets.symmetric(
-                        horizontal: 16.0 * scaleFactor,
-                        vertical: 16.0 * scaleFactorHeight),
+                    padding: EdgeInsets.fromLTRB(
+                      r.w(16),
+                      r.h(16),
+                      r.w(16),
+                      r.h(16),
+                    ),
                     child: Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
@@ -1207,7 +1369,7 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
                             ? 'Select an Audio File'
                             : 'Audio Files',
                         style: TextStyle(
-                          fontSize: 14 * scaleFactor * textScaleFactor,
+                          fontSize: r.fs(14),
                           fontWeight: FontWeight.w600,
                           color: Colors.black,
                         ),
@@ -1215,51 +1377,53 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
                     ),
                   ),
                 ),
-                _buildRingtoneList(
-                    scaleFactor, scaleFactorHeight, textScaleFactor),
+                _buildRingtoneList(),
               ],
             ),
           ),
           if (_selectedFile != null)
             Container(
               width: double.infinity,
-              padding: EdgeInsets.all(16 * scaleFactor),
+              padding: EdgeInsets.all(r.w(16)),
               decoration: BoxDecoration(
                 color: Colors.white,
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10 * scaleFactor,
-                    offset: Offset(0, -5 * scaleFactorHeight),
+                    blurRadius: r.w(10),
+                    offset: Offset(0, -r.h(5)),
                   ),
                 ],
               ),
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryColor,
-                  foregroundColor: Colors.white,
-                  padding:
-                  EdgeInsets.symmetric(vertical: 12 * scaleFactorHeight),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12 * scaleFactor),
+              child: SafeArea(
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(vertical: r.h(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(r.w(12)),
+                    ),
+                    elevation: 0,
                   ),
-                  elevation: 0,
-                ),
-                onPressed: _isProcessing ? null : _processAndSetRingtone,
-                icon: _isProcessing
-                    ? SizedBox(
-                    width: 20 * scaleFactor,
-                    height: 20 * scaleFactor,
+                  onPressed: _isProcessing ? null : _processAndSetRingtone,
+                  icon: _isProcessing
+                      ? SizedBox(
+                    width: r.w(20),
+                    height: r.w(20),
                     child: CircularProgressIndicator(
-                        strokeWidth: 2 * scaleFactor,
-                        valueColor: const AlwaysStoppedAnimation<Color>(
-                            Colors.white)))
-                    : Icon(Icons.notifications_active, size: 24 * scaleFactor),
-                label: Text(
-                  _isProcessing ? "Processing..." : "Set as Ringtone",
-                  style: TextStyle(
-                    fontSize: 16 * scaleFactor * textScaleFactor,
-                    fontWeight: FontWeight.w600,
+                      strokeWidth: r.w(2),
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                          Colors.white),
+                    ),
+                  )
+                      : Icon(Icons.notifications_active, size: r.w(24)),
+                  label: Text(
+                    _isProcessing ? "Processing..." : "Set as Ringtone",
+                    style: TextStyle(
+                      fontSize: r.fs(16),
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),

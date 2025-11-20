@@ -1,6 +1,3 @@
-
-//responsive done
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
@@ -12,7 +9,6 @@ import 'Merge_Audio/merge_audio_main.dart';
 import 'Ringtone/ringtone_main.dart';
 import 'videos_screen.dart';
 
-
 // --- Enhanced Animation Widgets ---
 // 1. InteractiveCard with Ripple Effect
 class InteractiveCard extends StatefulWidget {
@@ -21,7 +17,7 @@ class InteractiveCard extends StatefulWidget {
   final Color baseColor;
   final double scaleFactor;
   final Duration animationDuration;
-  final double? minHeight; // Add this line
+  final double? minHeight;
 
   const InteractiveCard({
     super.key,
@@ -30,7 +26,7 @@ class InteractiveCard extends StatefulWidget {
     required this.baseColor,
     this.scaleFactor = 0.96,
     this.animationDuration = const Duration(milliseconds: 120),
-    this.minHeight, // Add this line
+    this.minHeight,
   });
 
   @override
@@ -92,9 +88,8 @@ class _InteractiveCardState extends State<InteractiveCard> with SingleTickerProv
           return Transform.scale(
             scale: _scaleAnimation.value,
             child: Container(
-              // Changed: Use constraints instead of fixed height
               constraints: BoxConstraints(
-                minHeight: widget.minHeight ?? 140,
+                minHeight: widget.minHeight ?? 133,
               ),
               decoration: BoxDecoration(
                 color: _colorAnimation.value,
@@ -116,7 +111,6 @@ class _InteractiveCardState extends State<InteractiveCard> with SingleTickerProv
     );
   }
 }
-
 
 // 2. PressScaleBox
 class PressScaleBox extends StatefulWidget {
@@ -242,7 +236,6 @@ class StaggeredCard extends StatelessWidget {
   }
 }
 
-
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -281,11 +274,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
-    )
-      ..repeat(reverse: true);
+    )..repeat(reverse: true);
 
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.12)
-        .animate(
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.12).animate(
         CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut));
 
     _staggerController = AnimationController(
@@ -324,19 +315,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  Widget _buildHeader() {
-    final mediaQuery = MediaQuery.of(context);
-    const double referenceWidth = 375.0;
-    const double referenceHeight = 812.0;
-    final double scaleFactor = mediaQuery.size.width / referenceWidth;
-    final double scaleFactorHeight = mediaQuery.size.height / referenceHeight;
-    final double textScaleFactor = mediaQuery.textScaleFactor;
-
+  Widget _buildHeader(double screenWidth, double screenHeight) {
     const Color startColor = Color(0xFF4A7EFF);
     const Color endColor = Color(0xFF8A2BE2);
 
     return Container(
-      height: 110 * scaleFactorHeight,
+      padding: EdgeInsets.only(
+        left: screenWidth * 0.09,
+        right: screenWidth * 0.053,
+        top: screenHeight * 0.021,
+        bottom: screenHeight * 0.02,
+      ),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           colors: [startColor, endColor],
@@ -344,48 +333,42 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           end: Alignment.centerRight,
         ),
       ),
-      padding: EdgeInsets.only(left: 35 * scaleFactor,
-          right: 20 * scaleFactor,
-          top: 30 * scaleFactorHeight,
-          bottom: 8 * scaleFactorHeight),
       child: SafeArea(
-        top: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
+        bottom: false,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(
-                  Icons.auto_awesome_outlined,
-                  color: Colors.white,
-                  size: 25 * scaleFactor,
-                ),
-                SizedBox(width: 12 * scaleFactor),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Audio Converter',
-                        style: TextStyle(
-                          fontSize: 21 * scaleFactor * textScaleFactor,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      Text(
-                        'Professional audio tools',
-                        style: TextStyle(
-                          fontSize: 11 * scaleFactor * textScaleFactor,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
+            Icon(
+              Icons.auto_awesome_outlined,
+              color: Colors.white,
+              size: screenWidth * 0.067,
+            ),
+            SizedBox(width: screenWidth * 0.032),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Audio Converter',
+                    style: TextStyle(
+                      fontSize: screenWidth * 0.055,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      height: 1,
+                    ),
                   ),
-                ),
-              ],
+                  SizedBox(height: screenHeight * 0.004),
+                  Text(
+                    'Professional audio tools',
+                    style: TextStyle(
+                      fontSize: screenWidth * 0.031,
+                      color: Colors.white,
+                      height: 1,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -395,14 +378,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    final mediaQuery = MediaQuery.of(context);
-    const double referenceWidth = 375.0;
-    const double referenceHeight = 812.0;
-    final double scaleFactor = mediaQuery.size.width / referenceWidth;
-    final double scaleFactorHeight = mediaQuery.size.height / referenceHeight;
-    final double textScaleFactor = mediaQuery.textScaleFactor;
-
-    const double overlapHeight = 16.0;
+    // ✅ GET SCREEN DIMENSIONS - The MediaQuery Way
+    double screenWidth = MediaQuery.of(context).size.width;
+    double screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -412,133 +390,137 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildHeader(),
+              _buildHeader(screenWidth, screenHeight),
+
+              // ✅ Hero card overlaps header from below
               Transform.translate(
-                offset: Offset(0.0, -overlapHeight * scaleFactorHeight),
+                offset: Offset(0.0, -screenHeight * 0.015),
                 child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 20.0 * scaleFactor),
+                  padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.053),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Container(
                         width: double.infinity,
                         margin: const EdgeInsets.symmetric(horizontal: 0),
-                        child: _buildHeroCard(
-                            scaleFactor, scaleFactorHeight, textScaleFactor),
+                        child: _buildHeroCard(screenWidth, screenHeight),
                       ),
 
-                      SizedBox(height: 20 * scaleFactorHeight),
+                      SizedBox(height: screenHeight * 0.025),
 
                       Text(
                         'More Tools',
                         style: TextStyle(
-                          fontSize: 18 * scaleFactor * textScaleFactor,
+                          fontSize: screenWidth * 0.048,
                           fontWeight: FontWeight.bold,
                           color: Colors.black87,
                         ),
                       ),
 
-                      SizedBox(height: 16 * scaleFactorHeight),
+                      SizedBox(height: screenHeight * 0.02),
 
-                      // First Row with Staggered Animation
-                      Row(
-                        children: [
-                          Expanded(
-                            child: StaggeredCard(
-                              index: 0,
-                              animation: _staggerController,
-                              child: _buildFeatureCard(
-                                title: 'My Library',
-                                subtitle: 'View converted files',
-                                icon: Icons.folder_open_rounded,
-                                color: const Color(0xff0498e1),
-                                scaleFactor: scaleFactor,
-                                scaleFactorHeight: scaleFactorHeight,
-                                textScaleFactor: textScaleFactor,
-                                onTap: () {
-                                  Get.to(() => const OutputScreen(),
-                                      transition: Transition.fadeIn);
-                                },
+                      // ✅ First Row - IntrinsicHeight ensures equal heights
+                      IntrinsicHeight(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(
+                              child: StaggeredCard(
+                                index: 0,
+                                animation: _staggerController,
+                                child: _buildFeatureCard(
+                                  title: 'My Library',
+                                  subtitle: 'View files',
+                                  icon: Icons.folder_open_rounded,
+                                  color: const Color(0xff0498e1),
+                                  screenWidth: screenWidth,
+                                  screenHeight: screenHeight,
+                                  onTap: () {
+                                    Get.to(() => const OutputScreen(),
+                                        transition: Transition.fadeIn);
+                                  },
+                                ),
                               ),
                             ),
-                          ),
-                          SizedBox(width: 10 * scaleFactor),
-                          Expanded(
-                            child: StaggeredCard(
-                              index: 1,
-                              animation: _staggerController,
-                              child: _buildFeatureCard(
-                                title: 'Merge Audio',
-                                subtitle: 'Combine multiple files',
-                                icon: Icons.merge_outlined,
-                                color: const Color(0xFF7736DE),
-                                scaleFactor: scaleFactor,
-                                scaleFactorHeight: scaleFactorHeight,
-                                textScaleFactor: textScaleFactor,
-                                onTap: () {
-                                  Get.to(() => const MergeAudioScreen(),
-                                      transition: Transition.fadeIn);
-                                },
+                            SizedBox(width: screenWidth * 0.027),
+                            Expanded(
+                              child: StaggeredCard(
+                                index: 1,
+                                animation: _staggerController,
+                                child: _buildFeatureCard(
+                                  title: 'Merge Audio',
+                                  subtitle: 'Combine files',
+                                  icon: Icons.merge_outlined,
+                                  color: const Color(0xFF7736DE),
+                                  screenWidth: screenWidth,
+                                  screenHeight: screenHeight,
+                                  onTap: () {
+                                    Get.to(() => const MergeAudioScreen(),
+                                        transition: Transition.fadeIn);
+                                  },
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
 
-                      SizedBox(height: 10 * scaleFactorHeight),
+                      SizedBox(height: screenHeight * 0.012),
 
-                      // Second Row with Staggered Animation
-                      Row(
-                        children: [
-                          Expanded(
-                            child: StaggeredCard(
-                              index: 2,
-                              animation: _staggerController,
-                              child: _buildFeatureCard(
-                                title: 'Convert Format',
-                                subtitle: 'Change audio format',
-                                icon: Icons.audio_file_outlined,
-                                color: const Color(0xFF3BBEA6),
-                                scaleFactor: scaleFactor,
-                                scaleFactorHeight: scaleFactorHeight,
-                                textScaleFactor: textScaleFactor,
-                                onTap: () {
-                                  Get.to(() => const FormateMain(),
-                                      transition: Transition.fadeIn);
-                                },
+                      // ✅ Second Row - IntrinsicHeight ensures equal heights
+                      IntrinsicHeight(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(
+                              child: StaggeredCard(
+                                index: 2,
+                                animation: _staggerController,
+                                child: _buildFeatureCard(
+                                  title: 'Audio format',
+                                  subtitle: 'Change Type',
+                                  icon: Icons.audio_file_outlined,
+                                  color: const Color(0xFF3BBEA6),
+                                  screenWidth: screenWidth,
+                                  screenHeight: screenHeight,
+                                  onTap: () {
+                                    Get.to(() => const FormateMain(),
+                                        transition: Transition.fadeIn);
+                                  },
+                                ),
                               ),
                             ),
-                          ),
-                          SizedBox(width: 10 * scaleFactor),
-                          Expanded(
-                            child: StaggeredCard(
-                              index: 3,
-                              animation: _staggerController,
-                              child: _buildFeatureCard(
-                                title: 'Set Ringtone',
-                                subtitle: 'Custom Ringtones',
-                                icon: Icons.notifications_outlined,
-                                color: const Color(0xFFE68A00),
-                                scaleFactor: scaleFactor,
-                                scaleFactorHeight: scaleFactorHeight,
-                                textScaleFactor: textScaleFactor,
-                                onTap: () {
-                                  Get.to(() => const SetRingtonePage(),
-                                      transition: Transition.fadeIn);
-                                },
+                            SizedBox(width: screenWidth * 0.027),
+                            Expanded(
+                              child: StaggeredCard(
+                                index: 3,
+                                animation: _staggerController,
+                                child: _buildFeatureCard(
+                                  title: 'Set Ringtone',
+                                  subtitle: 'Custom Ringtones',
+                                  icon: Icons.notifications_outlined,
+                                  color: const Color(0xFFE68A00),
+                                  screenWidth: screenWidth,
+                                  screenHeight: screenHeight,
+                                  onTap: () {
+                                    Get.to(() => const SetRingtonePage(),
+                                        transition: Transition.fadeIn);
+                                  },
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
 
-                      SizedBox(height: 20 * scaleFactorHeight),
+                      SizedBox(height: screenHeight * 0.025),
                     ],
                   ),
                 ),
               ),
 
-              SizedBox(height: overlapHeight * scaleFactorHeight),
+              // ✅ Compensate for the overlap
+              SizedBox(height: screenHeight * 0.02),
             ],
           ),
         ),
@@ -546,22 +528,22 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       bottomNavigationBar: _isAdLoaded
           ? SafeArea(
         child: Container(
-          margin: EdgeInsets.all(8 * scaleFactor),
+          margin: EdgeInsets.all(screenWidth * 0.021),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(12 * scaleFactor),
+            borderRadius: BorderRadius.circular(screenWidth * 0.032),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.05),
-                blurRadius: 10 * scaleFactor,
-                offset: Offset(0, -2 * scaleFactorHeight),
+                blurRadius: screenWidth * 0.027,
+                offset: Offset(0, -screenHeight * 0.0025),
               ),
             ],
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(12 * scaleFactor),
+            borderRadius: BorderRadius.circular(screenWidth * 0.032),
             child: SizedBox(
-              height: _bannerAd!.size.height.toDouble() * scaleFactorHeight,
+              height: _bannerAd!.size.height.toDouble(),
               child: AdWidget(ad: _bannerAd!),
             ),
           ),
@@ -571,8 +553,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildHeroCard(double scaleFactor, double scaleFactorHeight,
-      double textScaleFactor) {
+  Widget _buildHeroCard(double screenWidth, double screenHeight) {
     const Color _primaryColor = Color(0xFF6C63FF);
 
     return PressScaleBox(
@@ -581,105 +562,110 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       },
       scaleFactor: 0.98,
       child: Container(
-        height: 185 * scaleFactorHeight,
+        constraints: BoxConstraints(
+          minHeight: screenHeight * 0.25,
+        ),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(24 * scaleFactor),
+          borderRadius: BorderRadius.circular(screenWidth * 0.064),
           boxShadow: [
             BoxShadow(
               color: _primaryColor.withOpacity(0.2),
-              blurRadius: 20 * scaleFactor,
-              offset: Offset(0, 10 * scaleFactorHeight),
+              blurRadius: screenWidth * 0.053,
+              offset: Offset(0, screenHeight * 0.012),
             ),
           ],
         ),
-        child: Stack(
-          children: [
-            Padding(
-              padding: EdgeInsets.all(24 * scaleFactor),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                            horizontal: 10 * scaleFactor,
-                            vertical: 4 * scaleFactorHeight),
-                        decoration: BoxDecoration(
-                          color: _primaryColor,
-                          borderRadius: BorderRadius.circular(20 * scaleFactor),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            CircleAvatar(radius: 3 * scaleFactor,
-                                backgroundColor: Colors.white),
-                            SizedBox(width: 8 * scaleFactor),
-                            Text(
-                              'Quick Convert',
-                              style: TextStyle(
-                                fontSize: 14 * scaleFactor * textScaleFactor,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ],
-                        ),
+        child: Padding(
+          padding: EdgeInsets.all(screenWidth * 0.053),
+          child: Row(
+            children: [
+              // Left side - Text content
+              Expanded(
+                flex: 3,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: screenWidth * 0.027,
+                        vertical: screenHeight * 0.005,
                       ),
-                    ],
-                  ),
+                      decoration: BoxDecoration(
+                        color: _primaryColor,
+                        borderRadius: BorderRadius.circular(screenWidth * 0.053),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CircleAvatar(
+                            radius: screenWidth * 0.008,
+                            backgroundColor: Colors.white,
+                          ),
+                          SizedBox(width: screenWidth * 0.021),
+                          Text(
+                            'Quick Convert',
+                            style: TextStyle(
+                              fontSize: screenWidth * 0.035,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.white,
+                              height: 1.2,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
 
-                  SizedBox(height: 22 * scaleFactorHeight),
-                  Text(
-                    'Video to Audio',
-                    style: TextStyle(
-                      fontSize: 25 * scaleFactor * textScaleFactor,
-                      fontWeight: FontWeight.w900,
-                      color: _primaryColor,
-                      height: 1.1,
+                    SizedBox(height: screenHeight * 0.02),
+
+                    Text(
+                      'Video to Audio',
+                      style: TextStyle(
+                        fontSize: screenWidth * 0.062,
+                        fontWeight: FontWeight.bold,
+                        color: _primaryColor,
+                        height: 1.1,
+                      ),
                     ),
-                  ),
-                  SizedBox(height: 6 * scaleFactorHeight),
-                  Text(
-                    'Tap to get started',
-                    style: TextStyle(
-                      fontSize: 14 * scaleFactor * textScaleFactor,
-                      color: _primaryColor,
-                      fontWeight: FontWeight.w600,
+
+                    SizedBox(height: screenHeight * 0.008),
+
+                    Text(
+                      'Tap to get started',
+                      style: TextStyle(
+                        fontSize: screenWidth * 0.035,
+                        color: _primaryColor,
+                        fontWeight: FontWeight.w600,
+                        height: 1.2,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
 
-            Positioned(
-              right: 25 * scaleFactor,
-              top: 0,
-              bottom: 0,
-              child: Center(
-                child: ScaleTransition(
-                  scale: _scaleAnimation,
-                  child: Container(
-                    width: 60 * scaleFactor,
-                    height: 60 * scaleFactor,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: _primaryColor.withOpacity(0.4)),
-                      color: _primaryColor.withOpacity(1),
-                    ),
-                    child: Icon(
-                      Icons.play_arrow_rounded,
-                      color: Colors.white,
-                      size: 45 * scaleFactor,
-                    ),
+              SizedBox(width: screenWidth * 0.04),
+
+              // Right side - Play button
+              ScaleTransition(
+                scale: _scaleAnimation,
+                child: Container(
+                  width: screenWidth * 0.15,
+                  height: screenWidth * 0.15,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: _primaryColor.withOpacity(0.4)),
+                    color: _primaryColor.withOpacity(1),
+                  ),
+                  child: Icon(
+                    Icons.play_arrow_rounded,
+                    color: Colors.white,
+                    size: screenWidth * 0.11,
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -691,24 +677,23 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     required IconData icon,
     required Color color,
     required VoidCallback onTap,
-    required double scaleFactor,
-    required double scaleFactorHeight,
-    required double textScaleFactor,
+    required double screenWidth,
+    required double screenHeight,
   }) {
     return InteractiveCard(
       onTap: onTap,
       baseColor: color,
-      minHeight: 140 * scaleFactorHeight, // Add this parameter
-      child: Padding(
-        padding: EdgeInsets.all(16.0 * scaleFactor),
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.all(screenWidth * 0.043),
         child: Column(
-          mainAxisSize: MainAxisSize.min, // Changed from mainAxisAlignment
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Icon at top
             Container(
-              width: 48 * scaleFactor,
-              height: 48 * scaleFactor,
+              width: screenWidth * 0.12,
+              height: screenWidth * 0.12,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: Colors.white.withOpacity(0.15),
@@ -717,35 +702,31 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 child: Icon(
                   icon,
                   color: Colors.white,
-                  size: 28 * scaleFactor,
+                  size: screenWidth * 0.07,
                 ),
               ),
             ),
 
-            SizedBox(height: 12 * scaleFactorHeight), // Add spacing
+            SizedBox(height: screenHeight * 0.012),
 
-            // Title - expandable
+            // Title - flexible, wraps naturally
             Text(
               title,
-              maxLines: 2,
-              overflow: TextOverflow.visible, // Changed from ellipsis
               style: TextStyle(
-                fontSize: 15 * scaleFactor * textScaleFactor,
+                fontSize: screenWidth * 0.040,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
-                height: 1.2,
+                height: 1.5,
               ),
             ),
 
-            SizedBox(height: 4 * scaleFactorHeight),
+            SizedBox(height: screenHeight * 0.004),
 
-            // Subtitle - expandable
+            // Subtitle - flexible, wraps naturally
             Text(
               subtitle,
-              maxLines: 2,
-              overflow: TextOverflow.visible, // Changed from ellipsis
               style: TextStyle(
-                fontSize: 11 * scaleFactor * textScaleFactor,
+                fontSize: screenWidth * 0.029,
                 color: Colors.white.withOpacity(0.9),
                 fontWeight: FontWeight.w600,
                 height: 1.3,

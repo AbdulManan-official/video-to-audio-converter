@@ -9,6 +9,7 @@ import 'package:video_to_audio_converter/controllers/controllers.dart';
 import 'package:path/path.dart' as path;
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../utils/resources.dart';
+import '../utils/responsive_helper.dart';
 import 'audio_saved_screen.dart';
 import 'package:ffmpeg_kit_flutter_new/ffprobe_kit.dart';
 
@@ -19,7 +20,7 @@ const Color primaryBlue = Color(0xFF6C63FF);
 const Color surfaceColor = Color(0xFFFAFAFA);
 const Color primaryDark = Color(0xFF0F172A);
 
-// --- VIDEO PLAYER WIDGET (Original Style with Blue Progress) ---
+// --- VIDEO PLAYER WIDGET (Responsive) ---
 
 class VideoPlaybackWidget extends StatefulWidget {
   final VideoPlayerController controller;
@@ -38,22 +39,19 @@ class VideoPlaybackWidget extends StatefulWidget {
 class _VideoPlaybackWidgetState extends State<VideoPlaybackWidget> {
   @override
   Widget build(BuildContext context) {
-    final mediaQuery = MediaQuery.of(context);
-    const double referenceWidth = 375.0;
-    final double scaleFactor = mediaQuery.size.width / referenceWidth;
-    final double textScaleFactor = mediaQuery.textScaleFactor;
+    final r = ResponsiveHelper(context);
 
     if (!widget.controller.value.isInitialized) {
       return Center(
         child: SizedBox(
-          height: 200 * scaleFactor,
+          height: r.h(200),
           child: const CircularProgressIndicator(),
         ),
       );
     }
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(12 * scaleFactor),
+      borderRadius: BorderRadius.circular(r.w(12)),
       child: AspectRatio(
         aspectRatio: widget.controller.value.aspectRatio,
         child: Stack(
@@ -83,7 +81,7 @@ class _VideoPlaybackWidgetState extends State<VideoPlaybackWidget> {
                     child: Icon(
                       Icons.play_circle_fill,
                       color: Colors.white,
-                      size: 64.0 * scaleFactor,
+                      size: r.w(64),
                     ),
                   ),
                 ),
@@ -96,7 +94,10 @@ class _VideoPlaybackWidgetState extends State<VideoPlaybackWidget> {
               right: 0,
               bottom: 0,
               child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 10 * scaleFactor, vertical: 4 * scaleFactor),
+                padding: EdgeInsets.symmetric(
+                  horizontal: r.w(10),
+                  vertical: r.h(4),
+                ),
                 color: Colors.black.withOpacity(0.5),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -114,14 +115,14 @@ class _VideoPlaybackWidgetState extends State<VideoPlaybackWidget> {
                             ? Icons.pause_circle_filled
                             : Icons.play_circle_fill,
                         color: Colors.white,
-                        size: 24 * scaleFactor,
+                        size: r.w(24),
                       ),
                     ),
                     Expanded(
                       child: VideoProgressIndicator(
                         widget.controller,
                         allowScrubbing: true,
-                        padding: EdgeInsets.symmetric(horizontal: 8 * scaleFactor),
+                        padding: EdgeInsets.symmetric(horizontal: r.w(8)),
                         colors: const VideoProgressColors(
                           playedColor: primaryBlue,
                           bufferedColor: Colors.grey,
@@ -132,7 +133,9 @@ class _VideoPlaybackWidgetState extends State<VideoPlaybackWidget> {
                     Text(
                       '${widget.formatDuration(widget.controller.value.position)} / ${widget.formatDuration(widget.controller.value.duration)}',
                       style: TextStyle(
-                          color: Colors.white, fontSize: 12 * scaleFactor * textScaleFactor),
+                        color: Colors.white,
+                        fontSize: r.fs(12),
+                      ),
                     ),
                   ],
                 ),
@@ -145,7 +148,7 @@ class _VideoPlaybackWidgetState extends State<VideoPlaybackWidget> {
   }
 }
 
-// --- FILE NAME INPUT (New Style) ---
+// --- FILE NAME INPUT (Responsive) ---
 
 class FileNameInputCard extends StatelessWidget {
   final String initialValue;
@@ -159,12 +162,7 @@ class FileNameInputCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final mediaQuery = MediaQuery.of(context);
-    const double referenceWidth = 375.0;
-    const double referenceHeight = 812.0;
-    final double scaleFactor = mediaQuery.size.width / referenceWidth;
-    final double scaleFactorHeight = mediaQuery.size.height / referenceHeight;
-    final double textScaleFactor = mediaQuery.textScaleFactor;
+    final r = ResponsiveHelper(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -172,38 +170,41 @@ class FileNameInputCard extends StatelessWidget {
         Text(
           "File Name",
           style: TextStyle(
-            fontSize: 14 * scaleFactor * textScaleFactor,
+            fontSize: r.fs(14),
             fontWeight: FontWeight.w600,
             color: primaryDark,
           ),
         ),
-        SizedBox(height: 8 * scaleFactorHeight),
+        SizedBox(height: r.h(8)),
         TextFormField(
           initialValue: initialValue,
           onChanged: onChanged,
           style: TextStyle(
             color: primaryDark,
-            fontSize: 15 * scaleFactor * textScaleFactor,
+            fontSize: r.fs(15),
           ),
           decoration: InputDecoration(
             hintText: 'Enter file name',
             hintStyle: TextStyle(
               color: Colors.grey.shade400,
-              fontSize: 15 * scaleFactor * textScaleFactor,
+              fontSize: r.fs(15),
             ),
-            contentPadding: EdgeInsets.symmetric(horizontal: 16 * scaleFactor, vertical: 14 * scaleFactorHeight),
+            contentPadding: EdgeInsets.symmetric(
+              horizontal: r.w(16),
+              vertical: r.h(14),
+            ),
             filled: true,
             fillColor: Colors.white,
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12 * scaleFactor),
+              borderRadius: BorderRadius.circular(r.w(12)),
               borderSide: BorderSide(color: Colors.grey.shade200),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12 * scaleFactor),
+              borderRadius: BorderRadius.circular(r.w(12)),
               borderSide: BorderSide(color: Colors.grey.shade200),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12 * scaleFactor),
+              borderRadius: BorderRadius.circular(r.w(12)),
               borderSide: const BorderSide(color: primaryBlue, width: 2),
             ),
           ),
@@ -213,7 +214,7 @@ class FileNameInputCard extends StatelessWidget {
   }
 }
 
-// --- CONVERSION OPTIONS (New Style) ---
+// --- CONVERSION OPTIONS (Responsive) ---
 
 class ConversionOptionsCard extends StatelessWidget {
   final String selectedFormat;
@@ -231,31 +232,29 @@ class ConversionOptionsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final mediaQuery = MediaQuery.of(context);
-    const double referenceWidth = 375.0;
-    final double scaleFactor = mediaQuery.size.width / referenceWidth;
+    final r = ResponsiveHelper(context);
 
     return Row(
       children: [
         Expanded(
           child: _buildOption(
-              context,
-              'Format',
-              selectedFormat,
-              onFormatChanged,
-              ['MP3(Fast)'],
-              scaleFactor
+            context,
+            'Format',
+            selectedFormat,
+            onFormatChanged,
+            ['MP3(Fast)'],
+            r,
           ),
         ),
-        SizedBox(width: 12 * scaleFactor),
+        SizedBox(width: r.w(12)),
         Expanded(
           child: _buildOption(
-              context,
-              'Bitrate',
-              selectedBitrate,
-              onBitrateChanged,
-              ['128kb/s', '256kb/s', '320kb/s'],
-              scaleFactor
+            context,
+            'Bitrate',
+            selectedBitrate,
+            onBitrateChanged,
+            ['128kb/s', '256kb/s', '320kb/s'],
+            r,
           ),
         ),
       ],
@@ -268,37 +267,41 @@ class ConversionOptionsCard extends StatelessWidget {
       String value,
       ValueChanged<String?> onChanged,
       List<String> items,
-      double scaleFactor,
+      ResponsiveHelper r,
       ) {
-    final double scaleFactorHeight = MediaQuery.of(context).size.height / 812.0;
-    final double textScaleFactor = MediaQuery.of(context).textScaleFactor;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
           style: TextStyle(
-            fontSize: 14 * scaleFactor * textScaleFactor,
+            fontSize: r.fs(14),
             fontWeight: FontWeight.w600,
             color: primaryDark,
           ),
         ),
-        SizedBox(height: 8 * scaleFactorHeight),
+        SizedBox(height: r.h(8)),
         Container(
-          padding: EdgeInsets.symmetric(horizontal: 12 * scaleFactor),
+          padding: EdgeInsets.symmetric(horizontal: r.w(12)),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(12 * scaleFactor),
-            border: Border.all(color: Colors.grey.shade200, width: 1.0 * scaleFactor),
+            borderRadius: BorderRadius.circular(r.w(12)),
+            border: Border.all(
+              color: Colors.grey.shade200,
+              width: r.w(1),
+            ),
           ),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
               value: value,
               isExpanded: true,
-              icon: Icon(Icons.arrow_drop_down, color: primaryDark, size: 24 * scaleFactor),
+              icon: Icon(
+                Icons.arrow_drop_down,
+                color: primaryDark,
+                size: r.w(24),
+              ),
               style: TextStyle(
-                fontSize: 14 * scaleFactor * textScaleFactor,
+                fontSize: r.fs(14),
                 color: primaryDark,
                 fontWeight: FontWeight.w500,
               ),
@@ -418,10 +421,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   }
 
   Future<bool> _validateBeforeConversion() async {
-    final mediaQuery = MediaQuery.of(context);
-    final double scaleFactor = mediaQuery.size.width / 375.0;
-    final double textScaleFactor = mediaQuery.textScaleFactor;
-
+    final r = ResponsiveHelper(context);
     final trimmedFileName = fileName.trim();
 
     if (trimmedFileName.isEmpty) {
@@ -437,24 +437,26 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       Get.dialog(
         AlertDialog(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16 * scaleFactor),
+            borderRadius: BorderRadius.circular(r.w(16)),
           ),
           title: Row(
             children: [
-              Icon(Icons.volume_off_rounded, color: Colors.red, size: 28 * scaleFactor),
-              SizedBox(width: 12 * scaleFactor),
-              Text(
-                'No Audio Found',
-                style: TextStyle(
-                  fontSize: 18 * scaleFactor * textScaleFactor,
-                  fontWeight: FontWeight.w600,
+              Icon(Icons.volume_off_rounded, color: Colors.red, size: r.w(28)),
+              SizedBox(width: r.w(12)),
+              Flexible(
+                child: Text(
+                  'No Audio Found',
+                  style: TextStyle(
+                    fontSize: r.fs(18),
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],
           ),
           content: Text(
             'This video does not contain any audio. Please select a video with audio to extract.',
-            style: TextStyle(fontSize: 15 * scaleFactor * textScaleFactor, height: 1.4),
+            style: TextStyle(fontSize: r.fs(15), height: 1.4),
           ),
           actions: [
             TextButton(
@@ -462,7 +464,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
               child: Text(
                 'OK',
                 style: TextStyle(
-                  fontSize: 16 * scaleFactor * textScaleFactor,
+                  fontSize: r.fs(16),
                   fontWeight: FontWeight.w600,
                   color: Colors.red,
                 ),
@@ -482,24 +484,26 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       Get.dialog(
         AlertDialog(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16 * scaleFactor),
+            borderRadius: BorderRadius.circular(r.w(16)),
           ),
           title: Row(
             children: [
-              Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28 * scaleFactor),
-              SizedBox(width: 12 * scaleFactor),
-              Text(
-                'File Already Exists',
-                style: TextStyle(
-                  fontSize: 18 * scaleFactor * textScaleFactor,
-                  fontWeight: FontWeight.w600,
+              Icon(Icons.warning_amber_rounded, color: Colors.orange, size: r.w(28)),
+              SizedBox(width: r.w(12)),
+              Flexible(
+                child: Text(
+                  'File Already Exists',
+                  style: TextStyle(
+                    fontSize: r.fs(18),
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],
           ),
           content: Text(
             'A file with the name "$trimmedFileName.mp3" already exists. Please rename your file.',
-            style: TextStyle(fontSize: 15 * scaleFactor * textScaleFactor, height: 1.4),
+            style: TextStyle(fontSize: r.fs(15), height: 1.4),
           ),
           actions: [
             TextButton(
@@ -507,7 +511,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
               child: Text(
                 'OK',
                 style: TextStyle(
-                  fontSize: 16 * scaleFactor * textScaleFactor,
+                  fontSize: r.fs(16),
                   fontWeight: FontWeight.w600,
                   color: primaryBlue,
                 ),
@@ -527,24 +531,26 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       Get.dialog(
         AlertDialog(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16 * scaleFactor),
+            borderRadius: BorderRadius.circular(r.w(16)),
           ),
           title: Row(
             children: [
-              Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28 * scaleFactor),
-              SizedBox(width: 12 * scaleFactor),
-              Text(
-                'File Already Exists',
-                style: TextStyle(
-                  fontSize: 18 * scaleFactor * textScaleFactor,
-                  fontWeight: FontWeight.w600,
+              Icon(Icons.warning_amber_rounded, color: Colors.orange, size: r.w(28)),
+              SizedBox(width: r.w(12)),
+              Flexible(
+                child: Text(
+                  'File Already Exists',
+                  style: TextStyle(
+                    fontSize: r.fs(18),
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],
           ),
           content: Text(
             'A file with the name "$trimmedFileName.mp3" already exists. Please rename your file.',
-            style: TextStyle(fontSize: 15 * scaleFactor * textScaleFactor, height: 1.4),
+            style: TextStyle(fontSize: r.fs(15), height: 1.4),
           ),
           actions: [
             TextButton(
@@ -552,7 +558,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
               child: Text(
                 'OK',
                 style: TextStyle(
-                  fontSize: 16 * scaleFactor * textScaleFactor,
+                  fontSize: r.fs(16),
                   fontWeight: FontWeight.w600,
                   color: primaryBlue,
                 ),
@@ -567,7 +573,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
 
     return true;
   }
-
 
   void _handleConversionAndNavigation() async {
     await conversionController.convertVideoToAudio(widget.videoPath, fileName);
@@ -610,12 +615,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final mediaQuery = MediaQuery.of(context);
-    const double referenceWidth = 375.0;
-    const double referenceHeight = 812.0;
-    final double scaleFactor = mediaQuery.size.width / referenceWidth;
-    final double scaleFactorHeight = mediaQuery.size.height / referenceHeight;
-    final double textScaleFactor = mediaQuery.textScaleFactor;
+    final r = ResponsiveHelper(context);
 
     return Scaffold(
       backgroundColor: surfaceColor,
@@ -623,21 +623,25 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.black, size: 24 * scaleFactor),
+          icon: Icon(Icons.arrow_back, color: Colors.black, size: r.w(24)),
           onPressed: () => Get.back(),
         ),
         centerTitle: false,
-        title: Text(
-          'Video Player',
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: 18 * scaleFactor * textScaleFactor,
-            fontWeight: FontWeight.w600,
+        title: Padding(
+          padding: EdgeInsets.only(left: r.isTablet() ? r.w(16) : 0),
+          child: Text(
+            'Video Player',
+            style: TextStyle(
+              color: Colors.black,
+              fontSize: r.fs(18),
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
+        toolbarHeight: r.h(60),
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(20 * scaleFactor),
+        padding: EdgeInsets.all(r.w(20)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -645,7 +649,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
               controller: _controller,
               formatDuration: _formatDuration,
             ),
-            SizedBox(height: 32 * scaleFactorHeight),
+            SizedBox(height: r.h(32)),
             FileNameInputCard(
               initialValue: fileName,
               onChanged: (value) {
@@ -654,7 +658,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                 });
               },
             ),
-            SizedBox(height: 24 * scaleFactorHeight),
+            SizedBox(height: r.h(24)),
             ConversionOptionsCard(
               selectedFormat: selectedFormat,
               onFormatChanged: (newValue) {
@@ -669,16 +673,16 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                 });
               },
             ),
-            SizedBox(height: 40 * scaleFactorHeight),
+            SizedBox(height: r.h(40)),
             Obx(
                   () => SizedBox(
-                height: 54 * scaleFactorHeight,
+                height: r.h(54),
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryBlue,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12 * scaleFactor),
+                      borderRadius: BorderRadius.circular(r.w(12)),
                     ),
                     elevation: 0,
                     disabledBackgroundColor: Colors.grey.shade300,
@@ -703,20 +707,20 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       SizedBox(
-                        width: 20 * scaleFactor,
-                        height: 20 * scaleFactor,
+                        width: r.w(20),
+                        height: r.w(20),
                         child: const CircularProgressIndicator(
                           color: Colors.white,
                           strokeWidth: 2.5,
                         ),
                       ),
-                      SizedBox(width: 12 * scaleFactor),
+                      SizedBox(width: r.w(12)),
                       Text(
                         'Extracting...',
                         style: TextStyle(
-                            fontSize: 16 * scaleFactor * textScaleFactor,
-                            fontWeight: FontWeight.bold,
-                            color:Colors.black
+                          fontSize: r.fs(16),
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
                         ),
                       ),
                     ],
@@ -724,12 +728,12 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                       : Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.audiotrack, color: Colors.white, size: 24 * scaleFactor),
-                      SizedBox(width: 8 * scaleFactor),
+                      Icon(Icons.audiotrack, color: Colors.white, size: r.w(24)),
+                      SizedBox(width: r.w(8)),
                       Text(
                         'EXTRACT AUDIO',
                         style: TextStyle(
-                          fontSize: 16 * scaleFactor * textScaleFactor,
+                          fontSize: r.fs(16),
                           fontWeight: FontWeight.bold,
                         ),
                       ),

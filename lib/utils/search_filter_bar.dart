@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'responsive_helper.dart';
 
 // Type definitions for clarity
 typedef TabSelectionCallback = void Function(int index);
 typedef SearchQueryCallback = void Function(String query);
 
-// ✅ NEW: Generic filter and sort function
+// ✅ Generic filter and sort function
 /// Filters a list based on a search query and optionally pins an item to the top
 ///
 /// [items] - The list of items to filter
@@ -47,29 +48,32 @@ Widget buildGenericSearchBar({
   required double textScaleFactor,
   required SearchQueryCallback onSearchQueryChanged,
   String hintText = 'Search files...', // Generic hint text
+  required BuildContext context, // Added context for responsive helper
 }) {
+  final r = ResponsiveHelper(context);
+
   return Padding(
-    padding: EdgeInsets.fromLTRB(16 * scaleFactor, 8 * scaleFactor, 16 * scaleFactor, 8 * scaleFactor),
+    padding: EdgeInsets.fromLTRB(r.w(16), r.h(8), r.w(16), r.h(8)),
     child: Container(
       decoration: BoxDecoration(
         color: const Color(0xFFFFFFFF),
-        borderRadius: BorderRadius.circular(12 * scaleFactor),
+        borderRadius: BorderRadius.circular(r.w(12)),
         border: Border.all(
           color: Colors.grey[400]!,
-          width: 1 * scaleFactor,
+          width: r.w(1),
         ),
       ),
       child: TextField(
         onChanged: onSearchQueryChanged,
         style: TextStyle(
-          fontSize: 14 * scaleFactor * textScaleFactor,
+          fontSize: r.fs(14),
           color: Colors.black87,
         ),
         decoration: InputDecoration(
           hintText: hintText,
           hintStyle: TextStyle(
             color: Colors.grey[500],
-            fontSize: 14 * scaleFactor * textScaleFactor,
+            fontSize: r.fs(14),
           ),
           border: InputBorder.none,
           enabledBorder: InputBorder.none,
@@ -77,11 +81,11 @@ Widget buildGenericSearchBar({
           prefixIcon: Icon(
             Icons.search,
             color: Colors.grey[500],
-            size: 20 * scaleFactor,
+            size: r.w(20),
           ),
           isDense: true,
           contentPadding: EdgeInsets.symmetric(
-            vertical: 12 * scaleFactor,
+            vertical: r.h(12),
             horizontal: 0,
           ),
           filled: true,
@@ -100,14 +104,20 @@ Widget buildGenericFilterTabs({
   required int selectedTabIndex,
   required TabSelectionCallback onTabSelected,
   required List<String> tabLabels,
+  required BuildContext context, // Added context for responsive helper
 }) {
+  final r = ResponsiveHelper(context);
+
   return Padding(
-    padding: EdgeInsets.fromLTRB(16 * scaleFactor, 0, 16 * scaleFactor, 12 * scaleFactorHeight),
+    padding: EdgeInsets.fromLTRB(r.w(16), 0, r.w(16), r.h(12)),
     child: SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Container(
-        padding: EdgeInsets.all(4 * scaleFactor),
-        decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(12 * scaleFactor)),
+        padding: EdgeInsets.all(r.w(4)),
+        decoration: BoxDecoration(
+          color: Colors.grey[200],
+          borderRadius: BorderRadius.circular(r.w(12)),
+        ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.start,
           children: List.generate(tabLabels.length, (index) {
@@ -118,6 +128,7 @@ Widget buildGenericFilterTabs({
               scaleFactor: scaleFactor,
               textScaleFactor: textScaleFactor,
               onTap: () => onTabSelected(index),
+              context: context, // Pass context
             );
           }),
         ),
@@ -134,23 +145,25 @@ Widget _buildTabButton({
   required double scaleFactor,
   required double textScaleFactor,
   required VoidCallback onTap,
+  required BuildContext context, // Added context for responsive helper
 }) {
+  final r = ResponsiveHelper(context);
   const double baseFontSize = 13.0;
 
   return GestureDetector(
     onTap: onTap,
     child: Container(
-      margin: EdgeInsets.all(2 * scaleFactor),
-      padding: EdgeInsets.symmetric(vertical: 10 * scaleFactor, horizontal: 10 * scaleFactor),
+      margin: EdgeInsets.all(r.w(2)),
+      padding: EdgeInsets.symmetric(vertical: r.h(10), horizontal: r.w(10)),
       decoration: BoxDecoration(
         color: isActive ? Colors.white : Colors.transparent,
-        borderRadius: BorderRadius.circular(10 * scaleFactor),
+        borderRadius: BorderRadius.circular(r.w(10)),
       ),
       child: Center(
         child: Text(
           label,
           style: TextStyle(
-            fontSize: baseFontSize,
+            fontSize: r.fs(baseFontSize),
             fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
             color: isActive ? Colors.black87 : Colors.grey[600],
           ),

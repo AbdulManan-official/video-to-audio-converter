@@ -2,18 +2,14 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-// Assuming these imports lead to your respective controllers and pages
 import '../../controllers/merge_controller.dart';
 import '../../controllers/fromate_audio_controller.dart';
 import '../../controllers/video_controller.dart';
 import '../../utils/resources.dart';
+import '../../utils/responsive_helper.dart';
 import 'progess_page.dart';
-// Import the reusable utility files
 import '../../utils/search_filter_bar.dart';
-import 'package:video_to_audio_converter/utils/utils.dart'; // For toastFlutter
-
-// NOTE: In a real app, you would need to import and use a package like 'permission_handler'
-// import 'package:permission_handler/permission_handler.dart';
+import 'package:video_to_audio_converter/utils/utils.dart';
 
 class FormateMain extends StatefulWidget {
   const FormateMain({super.key});
@@ -27,54 +23,37 @@ class _FormateMainState extends State<FormateMain> {
   final FormateAudioController formateController = Get.put(FormateAudioController());
   final VideoController videoController = Get.put(VideoController());
 
-  // --- STATE FOR SEARCH/FILTER & LOCAL ---
   String _searchQuery = '';
-  int _selectedTabIndex = 0; // 0=All, 1=Extracted, 2=Merged, 3=Converted, 4=Local
-  bool _isFetchingFiles = true; // For initial app-file load
+  int _selectedTabIndex = 0;
+  bool _isFetchingFiles = true;
 
-  // Local File Logic
   bool _isFetchingLocalFiles = false;
   bool _localMusicPermissionGranted = false;
-  List<File> localMusicFiles = []; // List for all local files
+  List<File> localMusicFiles = [];
 
-  // App-specific file lists
   List<File> videoMusicFiles = [];
   List<File> mergedAudioFiles = [];
   List<File> formatConverterAudioFiles = [];
 
   static const int maxSelectionLimit = 5;
 
-  // --- START NEW LOGIC: Permission Handling (SIMULATED) ---
   Future<bool> _requestStoragePermission() async {
-    // ----------------------------------------------------------------------
-    // !!! IMPORTANT: Replace this with actual permission handling logic in a real app.
-    // E.g., using permission_handler:
-    /*
-    final status = await Permission.storage.request();
-    if (status.isGranted) return true;
-    // ... logic for permanently denied
-    return false;
-    */
-    // ----------------------------------------------------------------------
-
-    // For this demonstration, we simulate permission being granted after a short delay
+    // Simply return true - no actual permission request
+    // Assumes app already has storage permissions granted
     await Future.delayed(const Duration(milliseconds: 300));
     return true;
   }
-  // --- END NEW LOGIC: Permission Handling (SIMULATED) ---
 
   @override
   void initState() {
     super.initState();
     _fetchAllAppAudioFiles();
 
-    // Set default format to MP3
     if (formateController.selectedFormat.value.isEmpty) {
       formateController.updateSelectedFormat('MP3');
     }
   }
 
-  // File Fetching Logic (App Files ONLY)
   Future<void> _fetchAllAppAudioFiles() async {
     setState(() {
       _isFetchingFiles = true;
@@ -86,7 +65,6 @@ class _FormateMainState extends State<FormateMain> {
       _fetchFilesFromDirectory('/storage/emulated/0/Music/Format Converter', formatConverterAudioFiles),
     ]);
 
-    // Update the proxy selection list based on the new file set
     _updateSelectionProxyList();
 
     setState(() {
@@ -100,16 +78,13 @@ class _FormateMainState extends State<FormateMain> {
     if (await dir.exists()) {
       List<File> files = dir
           .listSync()
-          .where(
-            (item) => !item.path.contains(".pending-")
-      )
+          .where((item) => !item.path.contains(".pending-"))
           .map((item) => File(item.path))
           .toList();
       targetList.addAll(files);
     }
   }
 
-  // --- NEW LOGIC: Fetching ALL local audio with permission check and exclusion ---
   Future<void> _fetchLocalAudioFiles({bool forcePermissionCheck = false}) async {
     if (mounted) {
       setState(() {
@@ -127,7 +102,7 @@ class _FormateMainState extends State<FormateMain> {
       }
 
       if (!isGranted) {
-        localMusicFiles = []; // Clear list if permission denied
+        localMusicFiles = [];
         if (mounted) {
           setState(() {
             _isFetchingLocalFiles = false;
@@ -147,14 +122,12 @@ class _FormateMainState extends State<FormateMain> {
       return;
     }
 
-    // Define app directories to exclude (in lower case for case-insensitive check)
     final appDirs = [
       '/storage/emulated/0/Music/VideoMusic',
       '/storage/emulated/0/Music/MergedAudio',
       '/storage/emulated/0/Music/Format Converter',
     ].map((path) => path.toLowerCase()).toSet();
 
-    // Define directories to search for all user audio files
     final directoriesToSearch = [
       Directory('/storage/emulated/0/Music'),
       Directory('/storage/emulated/0/Download'),
@@ -167,9 +140,11 @@ class _FormateMainState extends State<FormateMain> {
         await for (var entity in searchDir.list(recursive: true, followLinks: false)) {
           if (entity is File) {
             final path = entity.path.toLowerCase();
-            if ((path.endsWith('.mp3') || path.endsWith('.m4a') || path.endsWith('.wav') || path.endsWith('.aac')|| path.endsWith('.flac') ||   // Added
-                path.endsWith('.ogg')) &&
-                !appDirs.any((appDir) => path.contains(appDir))) { // Use .contains for nested folders
+            if ((path.endsWith('.mp3') || path.endsWith('.m4a') ||
+                path.endsWith('.wav') || path.endsWith('.aac') ||
+                path.endsWith('.flac') || path.endsWith('.ogg')) &&
+                !appDirs.any((appDir) => path.contains(appDir)) &&
+                entity.existsSync() && entity.lengthSync() > 0) { // <-- filter here
               files.add(entity);
             }
           }
@@ -185,43 +160,28 @@ class _FormateMainState extends State<FormateMain> {
     }
     _updateSelectionProxyList();
   }
-  // --- END NEW LOGIC ---
 
-  // Helper to ensure mergeController.selectedItems list matches the combined file list length
   void _updateSelectionProxyList() {
-    final allFiles = _getCurrentFiles(index: 0); // Get all app files
-    final localFiles = _getCurrentFiles(index: 4); // Get all local files
-
-    // Combine all unique file paths across all possible tabs
+    final allFiles = _getCurrentFiles(index: 0);
+    final localFiles = _getCurrentFiles(index: 4);
     final allPossibleFiles = <File>{...allFiles, ...localFiles}.toList();
-
-    // Create a new selection list, preserving existing selections by checking file path
     final newSelectedItems = List<bool>.generate(allPossibleFiles.length, (index) {
       return formateController.selectedFiles.contains(allPossibleFiles[index].path);
     }).obs;
-
-    // We must use a list that represents the currently visible files for the UI list.
-    // This is a proxy list that maps to the filtered list. Since the original implementation
-    // used a GetX list in mergeController, we will let that list be managed externally
-    // by the selection logic, and only ensure it is initialized once on startup/refetch.
-    // For now, we only need to ensure the local list is populated for the tab logic.
   }
 
-
-  // Helper to get files for the currently selected tab
   List<File> _getCurrentFiles({int? index}) {
     final targetIndex = index ?? _selectedTabIndex;
     switch (targetIndex) {
-      case 0: return [...videoMusicFiles, ...mergedAudioFiles, ...formatConverterAudioFiles]; // All (App)
-      case 1: return videoMusicFiles; // Extracted
-      case 2: return mergedAudioFiles; // Merged
-      case 3: return formatConverterAudioFiles; // Converted
-      case 4: return localMusicFiles; // Local Music (External)
+      case 0: return [...videoMusicFiles, ...mergedAudioFiles, ...formatConverterAudioFiles];
+      case 1: return videoMusicFiles;
+      case 2: return mergedAudioFiles;
+      case 3: return formatConverterAudioFiles;
+      case 4: return localMusicFiles;
       default: return [];
     }
   }
 
-  // --- NEW LOGIC: Tab Selection Handler ---
   void _handleTabSelected(int index) {
     if (index != _selectedTabIndex) {
       setState(() {
@@ -229,15 +189,13 @@ class _FormateMainState extends State<FormateMain> {
       });
     }
 
-    // Check if the newly selected tab is 'Local Music' (index 4)
     if (index == 4) {
       _fetchLocalAudioFiles(forcePermissionCheck: true);
     }
   }
-  // --- END NEW LOGIC ---
 
   int getSelectedCount() {
-    return formateController.selectedFiles.length; // Use the actual list for the count
+    return formateController.selectedFiles.length;
   }
 
   bool _isFileSelected(File file) => formateController.selectedFiles.contains(file.path);
@@ -269,6 +227,7 @@ class _FormateMainState extends State<FormateMain> {
 
   @override
   Widget build(BuildContext context) {
+    final responsive = ResponsiveHelper(context);
     final mediaQuery = MediaQuery.of(context);
     const double referenceWidth = 375.0;
     const double referenceHeight = 812.0;
@@ -284,46 +243,61 @@ class _FormateMainState extends State<FormateMain> {
         centerTitle: false,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.black, size: 24 * scaleFactor),
+          icon: Icon(
+            Icons.arrow_back,
+            color: Colors.black,
+            size: responsive.w(24),
+          ),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "Format Converter",
-              style: TextStyle(
-                color: Colors.black,
-                fontWeight: FontWeight.w600,
-                fontSize: 18 * scaleFactor * textScaleFactor,
-              ),
-            ),
-            Obx(() {
-              int selectedCount = getSelectedCount();
-              return Text(
-                selectedCount > 0
-                    ? "$selectedCount/$maxSelectionLimit selected"
-                    : "Select files to convert (max $maxSelectionLimit)",
+        title: Padding(
+          padding: EdgeInsets.only(left: responsive.isTablet() ? responsive.w(16) : 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                "Format Converter",
                 style: TextStyle(
-                  fontSize: 12 * scaleFactor * textScaleFactor,
-                  color: selectedCount >= maxSelectionLimit
-                      ? Colors.orange[700]
-                      : Colors.grey[600],
-                  fontWeight: FontWeight.normal,
+                  color: Colors.black,
+                  fontWeight: FontWeight.w600,
+                  fontSize: responsive.fs(18),
+                  height: 1.2,
                 ),
-              );
-            }),
-          ],
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              SizedBox(height: responsive.h(2)),
+              Obx(() {
+                int selectedCount = getSelectedCount();
+                return Text(
+                  selectedCount > 0
+                      ? "$selectedCount/$maxSelectionLimit selected"
+                      : "Select files to convert (max $maxSelectionLimit)",
+                  style: TextStyle(
+                    fontSize: responsive.fs(13),
+                    color: selectedCount >= maxSelectionLimit
+                        ? Colors.orange[700]
+                        : Colors.grey[600],
+                    fontWeight: FontWeight.w400,
+                    height: 1.2,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                );
+              }),
+            ],
+          ),
         ),
+        toolbarHeight: responsive.h(70),
       ),
       body: _isFetchingFiles
           ? const Center(child: CircularProgressIndicator())
           : Column(
         children: [
-          // --- START: MOVED OUTPUT FORMAT SECTION ---
           Container(
             width: double.infinity,
-            padding: EdgeInsets.all(20 * scaleFactor),
+            padding: EdgeInsets.all(responsive.w(20)),
             color: Colors.grey[50],
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -331,18 +305,18 @@ class _FormateMainState extends State<FormateMain> {
                 Text(
                   "Output Format",
                   style: TextStyle(
-                    fontSize: 16 * scaleFactor * textScaleFactor,
+                    fontSize: responsive.fs(16),
                     fontWeight: FontWeight.w600,
                     color: Colors.black87,
                   ),
                 ),
-                SizedBox(height: 16 * scaleFactorHeight),
+                SizedBox(height: responsive.h(16)),
                 GridView.count(
                   crossAxisCount: 3,
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  mainAxisSpacing: 12 * scaleFactorHeight,
-                  crossAxisSpacing: 12 * scaleFactor,
+                  mainAxisSpacing: responsive.h(12),
+                  crossAxisSpacing: responsive.w(12),
                   childAspectRatio: 1.2,
                   children: [
                     _buildFormatBox('MP3', 'Most compatible', 'MP3', primaryColor, scaleFactor, scaleFactorHeight, textScaleFactor),
@@ -356,16 +330,15 @@ class _FormateMainState extends State<FormateMain> {
               ],
             ),
           ),
-          // --- END: MOVED OUTPUT FORMAT SECTION ---
 
           Expanded(
             child: CustomScrollView(
               slivers: [
-                // --- REUSABLE SEARCH BAR WIDGET ---
                 SliverToBoxAdapter(
                   child: buildGenericSearchBar(
                     scaleFactor: scaleFactor,
                     textScaleFactor: textScaleFactor,
+                    context: context,
                     onSearchQueryChanged: (value) {
                       setState(() => _searchQuery = value.toLowerCase());
                     },
@@ -373,30 +346,34 @@ class _FormateMainState extends State<FormateMain> {
                   ),
                 ),
 
-                // --- REUSABLE FILTER TABS WIDGET ---
                 SliverToBoxAdapter(
                   child: buildGenericFilterTabs(
                     scaleFactor: scaleFactor,
                     scaleFactorHeight: scaleFactorHeight,
                     textScaleFactor: textScaleFactor,
+                    context: context,
                     selectedTabIndex: _selectedTabIndex,
-                    onTabSelected: _handleTabSelected, // Use the new handler
+                    onTabSelected: _handleTabSelected,
                     tabLabels: const ['All', 'Extracted', 'Merged', 'Converted', 'Local'],
                   ),
                 ),
 
-                // Select Files Section Header
                 if (!(_selectedTabIndex == 4 && !_localMusicPermissionGranted))
                   SliverToBoxAdapter(
                     child: Padding(
-                      padding: EdgeInsets.fromLTRB(16 * scaleFactor, 4 * scaleFactorHeight, 16 * scaleFactor, 12 * scaleFactorHeight),
+                      padding: EdgeInsets.fromLTRB(
+                        responsive.w(16),
+                        responsive.h(4),
+                        responsive.w(16),
+                        responsive.h(12),
+                      ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
                             "Available Files",
                             style: TextStyle(
-                              fontSize: 16 * scaleFactor * textScaleFactor,
+                              fontSize: responsive.fs(16),
                               fontWeight: FontWeight.w600,
                               color: Colors.black87,
                             ),
@@ -404,12 +381,15 @@ class _FormateMainState extends State<FormateMain> {
                           Obx(() {
                             int selectedCount = getSelectedCount();
                             return Container(
-                              padding: EdgeInsets.symmetric(horizontal: 12 * scaleFactor, vertical: 6 * scaleFactorHeight),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: responsive.w(12),
+                                vertical: responsive.h(6),
+                              ),
                               decoration: BoxDecoration(
                                 color: selectedCount >= maxSelectionLimit
                                     ? Colors.orange[50]
                                     : primaryColor.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(20 * scaleFactor),
+                                borderRadius: BorderRadius.circular(responsive.w(20)),
                               ),
                               child: Text(
                                 "$selectedCount/$maxSelectionLimit",
@@ -417,7 +397,7 @@ class _FormateMainState extends State<FormateMain> {
                                   color: selectedCount >= maxSelectionLimit
                                       ? Colors.orange[700]
                                       : primaryColor,
-                                  fontSize: 14 * scaleFactor * textScaleFactor,
+                                  fontSize: responsive.fs(14),
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -428,22 +408,22 @@ class _FormateMainState extends State<FormateMain> {
                     ),
                   ),
 
-                // Audio Files List
                 _buildFilesList(primaryColor, scaleFactor, scaleFactorHeight, textScaleFactor),
               ],
             ),
           ),
 
-          // Convert Button
           _buildConvertButton(primaryColor, scaleFactor, scaleFactorHeight, textScaleFactor),
         ],
       ),
     );
   }
 
-  Widget _buildFilesList(Color primaryColor, double scaleFactor, double scaleFactorHeight, double textScaleFactor) {
+// Replace the _buildFilesList method in your FormateMain class with this fixed version:
 
-    // --- NEW LOGIC: Handle Local Tab Loading and Permission Denied ---
+  Widget _buildFilesList(Color primaryColor, double scaleFactor, double scaleFactorHeight, double textScaleFactor) {
+    final r = ResponsiveHelper(context);
+
     if (_selectedTabIndex == 4 && _isFetchingLocalFiles) {
       return SliverFillRemaining(
         hasScrollBody: false,
@@ -455,7 +435,13 @@ class _FormateMainState extends State<FormateMain> {
               children: [
                 CircularProgressIndicator(strokeWidth: 2 * scaleFactor),
                 SizedBox(height: 16 * scaleFactorHeight),
-                Text('Scanning local audio files...', style: TextStyle(fontSize: 14 * scaleFactor * textScaleFactor, color: Colors.grey[600])),
+                Text(
+                  'Scanning local audio files...',
+                  style: TextStyle(
+                    fontSize: 14 * scaleFactor * textScaleFactor,
+                    color: Colors.grey[600],
+                  ),
+                ),
               ],
             ),
           ),
@@ -468,7 +454,6 @@ class _FormateMainState extends State<FormateMain> {
         child: _buildPermissionDeniedState(primaryColor, scaleFactor, scaleFactorHeight, textScaleFactor),
       );
     }
-    // --- END NEW LOGIC ---
 
     final currentFiles = _getCurrentFiles();
     final lowerCaseQuery = _searchQuery.toLowerCase();
@@ -491,7 +476,10 @@ class _FormateMainState extends State<FormateMain> {
                   SizedBox(height: 16 * scaleFactorHeight),
                   Text(
                     _searchQuery.isNotEmpty ? "No matching files found" : "No audio files ",
-                    style: TextStyle(color: Colors.grey[600], fontSize: 16 * scaleFactor * textScaleFactor),
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 16 * scaleFactor * textScaleFactor,
+                    ),
                   ),
                 ],
               ),
@@ -518,7 +506,11 @@ class _FormateMainState extends State<FormateMain> {
               return Opacity(
                 opacity: isLimitReached ? 0.5 : 1.0,
                 child: Container(
-                  margin: EdgeInsets.symmetric(horizontal: 16 * scaleFactor, vertical: 6 * scaleFactorHeight),
+                  margin: EdgeInsets.symmetric(
+                    horizontal: 16 * scaleFactor,
+                    vertical: 6 * scaleFactorHeight,
+                  ),
+                  padding: EdgeInsets.all(12 * scaleFactor), // Added consistent padding
                   decoration: BoxDecoration(
                     color: isSelected ? Colors.white.withOpacity(1) : Colors.white,
                     border: Border.all(
@@ -527,53 +519,75 @@ class _FormateMainState extends State<FormateMain> {
                     ),
                     borderRadius: BorderRadius.circular(12 * scaleFactor),
                   ),
-                  child: ListTile(
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12 * scaleFactor, vertical: 1 * scaleFactorHeight),
-                    leading: Container(
-                      width: 48 * scaleFactor,
-                      height: 48 * scaleFactor,
-                      decoration: BoxDecoration(
-                        color: isLimitReached ? Colors.grey[400] : primaryColor,
-                        borderRadius: BorderRadius.circular(10 * scaleFactor),
-                      ),
-                      child: Icon(
-                        Icons.audio_file,
-                        color: Colors.white,
-                        size: 28 * scaleFactor,
-                      ),
-                    ),
-                    title: Text(
-                      fileName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 14 * scaleFactor * textScaleFactor,
-                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                        color: isLimitReached ? Colors.grey[500] : Colors.black87,
-                      ),
-                    ),
-                    subtitle: Text(
-                      "${fileSize.toStringAsFixed(2)} MB",
-                      style: TextStyle(
-                        fontSize: 12 * scaleFactor * textScaleFactor,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                    trailing: Transform.scale(
-                      scale: scaleFactor, // Scale the checkbox itself
-                      child: Checkbox(
-                        value: isSelected,
-                        activeColor: primaryColor,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(4 * scaleFactor),
+                  child: Row(
+                    children: [
+                      // FIXED: Audio icon container with proper responsive sizing
+                      Container(
+                        width: r.w(48), // Use ResponsiveHelper instead of direct scaleFactor
+                        height: r.w(48), // Keep square aspect ratio
+                        decoration: BoxDecoration(
+                          color: isLimitReached ? Colors.grey[400] : primaryColor,
+                          borderRadius: BorderRadius.circular(r.w(12)),
                         ),
-                        onChanged: isLimitReached
-                            ? null
-                            : (value) {
-                          _handleFileSelection(file, value);
-                        },
+                        child: Icon(
+                          Icons.audio_file,
+                          color: Colors.white,
+                          size: r.w(24), // Icon size also scales properly
+                        ),
                       ),
-                    ),
+                      SizedBox(width: 12 * scaleFactor),
+                      // File info
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              fileName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 14 * scaleFactor * textScaleFactor,
+                                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                                color: isLimitReached ? Colors.grey[500] : Colors.black87,
+                              ),
+                            ),
+                            SizedBox(height: 4 * scaleFactorHeight),
+                            Text(
+                              "${fileSize.toStringAsFixed(2)} MB",
+                              style: TextStyle(
+                                fontSize: 12 * scaleFactor * textScaleFactor,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(width: 8 * scaleFactor),
+                      // FIXED: Responsive Checkbox
+                      SizedBox(
+                        width: r.w(24), // Fixed responsive width
+                        height: r.w(24), // Fixed responsive height
+                        child: Checkbox(
+                          value: isSelected,
+                          activeColor: primaryColor,
+                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          visualDensity: VisualDensity.compact,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(r.w(4)),
+                          ),
+                          side: BorderSide(
+                            color: isLimitReached ? Colors.grey[400]! : Colors.grey[400]!,
+                            width: r.w(2),
+                          ),
+                          onChanged: isLimitReached
+                              ? null
+                              : (value) {
+                            _handleFileSelection(file, value);
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               );
@@ -585,7 +599,6 @@ class _FormateMainState extends State<FormateMain> {
     );
   }
 
-  // --- NEW WIDGET: Permission Denied State ---
   Widget _buildPermissionDeniedState(Color primaryColor, double scaleFactor, double scaleFactorHeight, double textScaleFactor) {
     return Container(
       padding: EdgeInsets.all(32 * scaleFactor),
@@ -620,16 +633,24 @@ class _FormateMainState extends State<FormateMain> {
             ),
             SizedBox(height: 24 * scaleFactorHeight),
             ElevatedButton.icon(
-              onPressed: () => _fetchLocalAudioFiles(forcePermissionCheck: true), // Re-request permission
+              onPressed: () => _fetchLocalAudioFiles(forcePermissionCheck: true),
               icon: Icon(Icons.security, size: 20 * scaleFactor, color: Colors.white),
               label: Text(
                 'Grant Permission',
-                style: TextStyle(fontSize: 14 * scaleFactor * textScaleFactor, color: Colors.white),
+                style: TextStyle(
+                  fontSize: 14 * scaleFactor * textScaleFactor,
+                  color: Colors.white,
+                ),
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryColor,
-                padding: EdgeInsets.symmetric(horizontal: 20 * scaleFactor, vertical: 12 * scaleFactorHeight),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10 * scaleFactor)),
+                padding: EdgeInsets.symmetric(
+                  horizontal: 20 * scaleFactor,
+                  vertical: 12 * scaleFactorHeight,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10 * scaleFactor),
+                ),
                 elevation: 0,
               ),
             ),
@@ -638,7 +659,6 @@ class _FormateMainState extends State<FormateMain> {
       ),
     );
   }
-  // --- END NEW WIDGET ---
 
   Widget _buildConvertButton(Color primaryColor, double scaleFactor, double scaleFactorHeight, double textScaleFactor) {
     return Obx(() {
@@ -685,22 +705,19 @@ class _FormateMainState extends State<FormateMain> {
                 return;
               }
 
-              // Reset fileProgress ONLY
               formateController.fileProgress.clear();
               for (int i = 0; i < formateController.selectedFiles.length; i++) {
                 formateController.fileProgress.add(0.0.obs);
               }
 
-              // Navigate to progress page
               await Get.to(() => const ConversionProgressPage());
 
-              // Reset after back
               mergeController.removeAll();
               formateController.selectedFiles.clear();
               formateController.selectedFormat.value = 'MP3';
               formateController.fileProgress.clear();
               formateController.isConverting.value = false;
-              // Re-fetch files for the active tab only
+
               if (_selectedTabIndex == 4) {
                 await _fetchLocalAudioFiles();
               } else {

@@ -24,11 +24,16 @@ class RingtoneSetMul {
     return await _channel.invokeMethod('reqSystemPermissions') ?? false;
   }
 
-  // Set as ringtone
-  static Future<bool> setRingtone(String path, {String? mimeType}) async {
+  // Set as ringtone with optional SIM slot support
+  static Future<bool> setRingtone(
+      String path, {
+        String? mimeType,
+        int? simSlot, // 1 for SIM 1, 2 for SIM 2, null for default
+      }) async {
     return await _channel.invokeMethod('setRingtone', {
       'path': path,
       'mimeType': mimeType,
+      'simSlot': simSlot,
     }) ?? false;
   }
 

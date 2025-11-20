@@ -14,6 +14,10 @@ import 'views/home_page.dart';
 import 'package:share_plus/share_plus.dart';
 import './utils/waveform_audio_utils.dart';
 import 'dart:developer';
+// import 'package:device_preview/device_preview.dart';
+import 'package:flutter/foundation.dart';
+
+
 
 const Color secondaryColor = Color(0xFF6C63FF);
 
@@ -26,8 +30,10 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await _initializePlugins();
   await clearOldFilesOnFirstLaunch();
+
   runApp(const MyApp());
 }
+
 
 Future<void> _initializePlugins() async {
   if (Platform.isAndroid || Platform.isIOS) {
@@ -148,10 +154,22 @@ class MyApp extends StatelessWidget {
           dragHandleColor: Colors.grey,
         ),
       ),
+
+      /// System font scaling disabled (safe to keep)
+      builder: (context, child) {
+        final mq = MediaQuery.of(context);
+
+        return MediaQuery(
+          data: mq.copyWith(textScaleFactor: 1.0), // Prevent system font changes
+          child: child!,
+        );
+      },
+
       home: const HomeScreen(),
     );
   }
 }
+
 
 class OutputScreen extends StatefulWidget {
   const OutputScreen({super.key});
@@ -362,27 +380,66 @@ class _OutputScreenState extends State<OutputScreen> {
   }
 
   void _showDeleteMultipleConfirmation() {
+    final mediaQuery = MediaQuery.of(context);
+    const double referenceWidth = 375.0;
+    final double scaleFactor = mediaQuery.size.width / referenceWidth;
+    final double textScaleFactor = mediaQuery.textScaleFactor;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Files'),
-        content: Text(
-            'Are you sure you want to delete ${_selectedFiles.length} file(s)? This action cannot be undone.'),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16 * scaleFactor),
+        ),
+        contentPadding: EdgeInsets.all(20 * scaleFactor),
+        title: Text(
+          'Delete Files',
+          style: TextStyle(
+            fontSize: 18 * scaleFactor * textScaleFactor,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        content: SizedBox(
+          width: MediaQuery.of(context).size.width * 0.8,
+          child: Text(
+            'Are you sure you want to delete ${_selectedFiles.length} file(s)? This action cannot be undone.',
+            style: TextStyle(fontSize: 15 * scaleFactor * textScaleFactor),
+          ),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('CANCEL'),
+            style: TextButton.styleFrom(
+              padding: EdgeInsets.symmetric(
+                horizontal: 20 * scaleFactor,
+                vertical: 12 * scaleFactor,
+              ),
+            ),
+            child: Text(
+              'CANCEL',
+              style: TextStyle(fontSize: 14 * scaleFactor * textScaleFactor),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
+              padding: EdgeInsets.symmetric(
+                horizontal: 20 * scaleFactor,
+                vertical: 12 * scaleFactor,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8 * scaleFactor),
+              ),
             ),
             onPressed: () async {
               Navigator.pop(context);
               await _deleteSelectedFiles();
             },
-            child: const Text('DELETE'),
+            child: Text(
+              'DELETE',
+              style: TextStyle(fontSize: 14 * scaleFactor * textScaleFactor),
+            ),
           ),
         ],
       ),
@@ -451,25 +508,68 @@ class _OutputScreenState extends State<OutputScreen> {
 
     TextEditingController _controller = TextEditingController(text: baseName);
 
+    final mediaQuery = MediaQuery.of(context);
+    const double referenceWidth = 375.0;
+    final double scaleFactor = mediaQuery.size.width / referenceWidth;
+    final double textScaleFactor = mediaQuery.textScaleFactor;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Rename File'),
-        content: TextField(
-          controller: _controller,
-          decoration: const InputDecoration(
-            hintText: 'Enter new file name',
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16 * scaleFactor),
+        ),
+        contentPadding: EdgeInsets.all(20 * scaleFactor),
+        title: Text(
+          'Rename File',
+          style: TextStyle(
+            fontSize: 18 * scaleFactor * textScaleFactor,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        content: SizedBox(
+          width: MediaQuery.of(context).size.width * 0.8,
+          child: TextField(
+            controller: _controller,
+            style: TextStyle(fontSize: 16 * scaleFactor * textScaleFactor),
+            decoration: InputDecoration(
+              hintText: 'Enter new file name',
+              hintStyle: TextStyle(fontSize: 14 * scaleFactor * textScaleFactor),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 12 * scaleFactor,
+                vertical: 12 * scaleFactor,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8 * scaleFactor),
+              ),
+            ),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('CANCEL'),
+            style: TextButton.styleFrom(
+              padding: EdgeInsets.symmetric(
+                horizontal: 20 * scaleFactor,
+                vertical: 12 * scaleFactor,
+              ),
+            ),
+            child: Text(
+              'CANCEL',
+              style: TextStyle(fontSize: 14 * scaleFactor * textScaleFactor),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: secondaryColor,
               foregroundColor: Colors.white,
+              padding: EdgeInsets.symmetric(
+                horizontal: 20 * scaleFactor,
+                vertical: 12 * scaleFactor,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8 * scaleFactor),
+              ),
             ),
             onPressed: () async {
               String newBaseName = _controller.text.trim();
@@ -519,12 +619,16 @@ class _OutputScreenState extends State<OutputScreen> {
                 _showSuccessOverlay('Failed to rename file');
               }
             },
-            child: const Text('RENAME'),
+            child: Text(
+              'RENAME',
+              style: TextStyle(fontSize: 14 * scaleFactor * textScaleFactor),
+            ),
           ),
         ],
       ),
     );
   }
+
 
 
   void _showSuccessOverlay(String message) {
@@ -620,15 +724,26 @@ class _OutputScreenState extends State<OutputScreen> {
 
     final Offset position = button.localToGlobal(Offset.zero, ancestor: overlay);
 
+    // Calculate menu width based on screen size
+    final double menuWidth = 180 * scaleFactor;
+
+    // Ensure menu doesn't go off screen
+    final double rightPosition = mediaQuery.size.width - position.dx;
+    final double leftPosition = position.dx;
+
     showMenu(
       context: context,
       position: RelativeRect.fromLTRB(
-        position.dx - (150 * scaleFactor),
-        position.dy + (10 * scaleFactor),
-        position.dx,
+        leftPosition > menuWidth ? position.dx - menuWidth : leftPosition,
+        position.dy + (button.size.height),
+        rightPosition > menuWidth ? rightPosition : position.dx,
         position.dy,
       ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12 * scaleFactor)),
+      constraints: BoxConstraints(
+        minWidth: 160 * scaleFactor,
+        maxWidth: 200 * scaleFactor,
+      ),
       items: [
         PopupMenuItem(
           padding: EdgeInsets.zero,
@@ -649,7 +764,6 @@ class _OutputScreenState extends State<OutputScreen> {
             ),
           ),
         ),
-
         PopupMenuItem(
           padding: EdgeInsets.zero,
           child: InkWell(
@@ -693,24 +807,60 @@ class _OutputScreenState extends State<OutputScreen> {
     );
   }
 
-  void _showDeleteConfirmation(
-      BuildContext context, File file, Directory? directory) {
+  void _showDeleteConfirmation(BuildContext context, File file, Directory? directory) {
     String fileName = file.path.split('/').last;
+
+    final mediaQuery = MediaQuery.of(context);
+    const double referenceWidth = 375.0;
+    final double scaleFactor = mediaQuery.size.width / referenceWidth;
+    final double textScaleFactor = mediaQuery.textScaleFactor;
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete File'),
-        content: Text(
-            'Are you sure you want to delete "$fileName"? This action cannot be undone.'),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16 * scaleFactor),
+        ),
+        contentPadding: EdgeInsets.all(20 * scaleFactor),
+        title: Text(
+          'Delete File',
+          style: TextStyle(
+            fontSize: 18 * scaleFactor * textScaleFactor,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        content: SizedBox(
+          width: MediaQuery.of(context).size.width * 0.8,
+          child: Text(
+            'Are you sure you want to delete "$fileName"? This action cannot be undone.',
+            style: TextStyle(fontSize: 15 * scaleFactor * textScaleFactor),
+          ),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('CANCEL'),
-          ),ElevatedButton(
+            style: TextButton.styleFrom(
+              padding: EdgeInsets.symmetric(
+                horizontal: 20 * scaleFactor,
+                vertical: 12 * scaleFactor,
+              ),
+            ),
+            child: Text(
+              'CANCEL',
+              style: TextStyle(fontSize: 14 * scaleFactor * textScaleFactor),
+            ),
+          ),
+          ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
+              padding: EdgeInsets.symmetric(
+                horizontal: 20 * scaleFactor,
+                vertical: 12 * scaleFactor,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8 * scaleFactor),
+              ),
             ),
             onPressed: () async {
               Navigator.pop(context);
@@ -748,9 +898,11 @@ class _OutputScreenState extends State<OutputScreen> {
                 _showSuccessOverlay('Failed to delete $fileName');
               }
             },
-            child: const Text('DELETE'),
+            child: Text(
+              'DELETE',
+              style: TextStyle(fontSize: 14 * scaleFactor * textScaleFactor),
+            ),
           ),
-
         ],
       ),
     );

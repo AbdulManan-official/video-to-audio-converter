@@ -1,31 +1,13 @@
 import 'dart:io';
 import 'dart:math';
-import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:just_audio/just_audio.dart';
-import 'package:ringtone_set_mul/ringtone_set_mul.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:video_to_audio_converter/controllers/network_controller.dart';
 import 'package:video_to_audio_converter/views/home_page.dart';
 import '../controllers/audio_controller.dart';
 import '../main.dart';
-import '../utils/prefs.dart';
-import '../utils/resources.dart';
-
-// Assuming OutputScreen is defined elsewhere and imported via video_to_audio_converter/views/home_page.dart or similar
-// For this single file's context, I'll add a minimal placeholder for OutputScreen
-class OutputScreen extends StatelessWidget {
-  const OutputScreen({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Output Screen')),
-      body: const Center(child: Text('Placeholder Output Screen')),
-    );
-  }
-}
-
+import '../utils/responsive_helper.dart';
 
 class AudioSavedScreen extends StatefulWidget {
   final String fileName;
@@ -54,20 +36,16 @@ class _AudioSavedScreenState extends State<AudioSavedScreen> with SingleTickerPr
   @override
   void initState() {
     super.initState();
+
+    // ✅ Always initialize audio when screen loads
     audioController.initAudio(widget.audioPath);
 
     // Listen to player state changes to detect when audio completes
     audioController.audioPlayer.playerStateStream.listen((state) {
       if (state.processingState == ProcessingState.completed) {
         // When audio completes:
-
-        // 1. Explicitly stop playback
         audioController.audioPlayer.stop();
-
-        // 2. Seek to beginning
         audioController.audioPlayer.seek(Duration.zero);
-
-        // 3. ✅ FIX: Update the GetX reactive variable to reflect not playing.
         audioController.isPlaying.value = false;
 
         if (mounted) {
@@ -94,81 +72,97 @@ class _AudioSavedScreenState extends State<AudioSavedScreen> with SingleTickerPr
   @override
   void dispose() {
     _bodyAnimationController.dispose();
-    audioController.audioPlayer.dispose();
+    // ✅ DON'T dispose audio player here - let it persist when navigating
+    // Only dispose when explicitly needed (e.g., going home)
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final mediaQuery = MediaQuery.of(context);
-    const double referenceWidth = 375.0;
-    const double referenceHeight = 812.0;
-    final double scaleFactor = mediaQuery.size.width / referenceWidth;
-    final double scaleFactorHeight = mediaQuery.size.height / referenceHeight;
-    final double textScaleFactor = mediaQuery.textScaleFactor;
-
+    final r = ResponsiveHelper(context);
     final audioFile = File(widget.audioPath);
     final fileSize = _formatFileSize(audioFile);
 
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        title: Text(
-          'Audio Saved',
-          style: TextStyle(
-            fontSize: 18 * scaleFactor * textScaleFactor,
-            fontWeight: FontWeight.w600,
-            color: Colors.black,
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.home, size: 24 * scaleFactor),
+    return WillPopScope(
+      // ✅ Handle back button - don't dispose audio
+      onWillPop: () async {
+        return true; // Allow back navigation without disposing
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(
+              Icons.arrow_back,
+              color: Colors.black,
+              size: r.fs(28),
+            ),
             onPressed: () {
-              Get.offAll(() => const HomeScreen());
+              // ✅ Just navigate back, don't dispose audio
+              Get.back();
             },
           ),
-        ],
-      ),
-      body: FadeTransition(
-        opacity: _opacityAnimation,
-        child: ScaleTransition(
-          scale: _scaleAnimation,
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: EdgeInsets.all(16.0 * scaleFactor),
-              child: Column(
-                children: [
-                  _AudioInfoCard(
-                    accentColor: accentColor,
-                    fileName: widget.fileName,
-                    fileSize: fileSize,
-                    bitrate: widget.bitrate,
-                    scaleFactor: scaleFactor,
-                    scaleFactorHeight: scaleFactorHeight,
-                    textScaleFactor: textScaleFactor,
-                  ),
-                  SizedBox(height: 30 * scaleFactorHeight),
-                  _AudioPlayerCard(
-                    audioController: audioController,
-                    accentColor: accentColor,
-                    formatDuration: _formatDuration,
-                    scaleFactor: scaleFactor,
-                    scaleFactorHeight: scaleFactorHeight,
-                    textScaleFactor: textScaleFactor,
-                  ),
-                  SizedBox(height: 30 * scaleFactorHeight),
-                  _ActionButtonsRow(
-                    accentColor: accentColor,
-                    audioController: audioController,
-                    audioPath: widget.audioPath,
-                    fileName: widget.fileName,
-                    scaleFactor: scaleFactor,
-                    scaleFactorHeight: scaleFactorHeight,
-                    textScaleFactor: textScaleFactor,
-                  ),
-                ],
+          title: Padding(
+            padding: EdgeInsets.only(left: r.isTablet() ? r.w(16) : 0),
+            child: Text(
+              'Audio Saved',
+              style: TextStyle(
+                fontSize: r.fs(18),
+                fontWeight: FontWeight.w600,
+                color: Colors.black,
+              ),
+            ),
+          ),
+          actions: [
+            IconButton(
+              icon: Icon(
+                Icons.home,
+                size: r.fs(26),
+                color: Colors.black,
+              ),
+              onPressed: () {
+                // ✅ Dispose audio only when going home
+                audioController.audioPlayer.dispose();
+                Get.offAll(() => const HomeScreen());
+              },
+            ),
+          ],
+          toolbarHeight: r.h(60),
+        ),
+        body: FadeTransition(
+          opacity: _opacityAnimation,
+          child: ScaleTransition(
+            scale: _scaleAnimation,
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: EdgeInsets.all(r.w(16)),
+                child: Column(
+                  children: [
+                    _AudioInfoCard(
+                      accentColor: accentColor,
+                      fileName: widget.fileName,
+                      fileSize: fileSize,
+                      bitrate: widget.bitrate,
+                      r: r,
+                    ),
+                    SizedBox(height: r.h(30)),
+                    _AudioPlayerCard(
+                      audioController: audioController,
+                      accentColor: accentColor,
+                      formatDuration: _formatDuration,
+                      r: r,
+                    ),
+                    SizedBox(height: r.h(30)),
+                    _ActionButtonsRow(
+                      accentColor: accentColor,
+                      audioController: audioController,
+                      audioPath: widget.audioPath,
+                      fileName: widget.fileName,
+                      r: r,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -198,18 +192,14 @@ class _AudioInfoCard extends StatelessWidget {
   final String fileName;
   final String fileSize;
   final String bitrate;
-  final double scaleFactor;
-  final double scaleFactorHeight;
-  final double textScaleFactor;
+  final ResponsiveHelper r;
 
   const _AudioInfoCard({
     required this.accentColor,
     required this.fileName,
     required this.fileSize,
     required this.bitrate,
-    required this.scaleFactor,
-    required this.scaleFactorHeight,
-    required this.textScaleFactor,
+    required this.r,
   });
 
   @override
@@ -217,21 +207,21 @@ class _AudioInfoCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20 * scaleFactor),
+        borderRadius: BorderRadius.circular(r.w(20)),
       ),
-      padding: EdgeInsets.all(20 * scaleFactor),
+      padding: EdgeInsets.all(r.w(20)),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12 * scaleFactor),
+              borderRadius: BorderRadius.circular(r.w(12)),
               color: Colors.grey.withOpacity(0.1),
             ),
-            padding: EdgeInsets.all(12 * scaleFactor),
-            child: Icon(Icons.audio_file, size: 30 * scaleFactor, color: accentColor),
+            padding: EdgeInsets.all(r.w(12)),
+            child: Icon(Icons.audio_file, size: r.w(30), color: accentColor),
           ),
-          SizedBox(width: 16 * scaleFactor),
+          SizedBox(width: r.w(16)),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -241,34 +231,34 @@ class _AudioInfoCard extends StatelessWidget {
                   style: TextStyle(
                     color: Colors.green[600],
                     fontWeight: FontWeight.w600,
-                    fontSize: 12 * scaleFactor * textScaleFactor,
+                    fontSize: r.fs(12),
                   ),
                 ),
-                SizedBox(height: 4 * scaleFactorHeight),
+                SizedBox(height: r.h(4)),
                 Text(
                   fileName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontWeight: FontWeight.w800,
-                    fontSize: 17 * scaleFactor * textScaleFactor,
+                    fontSize: r.fs(17),
                     color: Colors.black87,
                   ),
                 ),
-                SizedBox(height: 8 * scaleFactorHeight),
+                SizedBox(height: r.h(8)),
                 Text(
                   'Size: $fileSize',
-                  style: TextStyle(color: Colors.grey[600], fontSize: 13 * scaleFactor * textScaleFactor),
+                  style: TextStyle(color: Colors.grey[600], fontSize: r.fs(13)),
                 ),
-                SizedBox(height: 2 * scaleFactorHeight),
+                SizedBox(height: r.h(2)),
                 Text(
                   'Bitrate: $bitrate kbps',
-                  style: TextStyle(color: Colors.grey[600], fontSize: 13 * scaleFactor * textScaleFactor),
+                  style: TextStyle(color: Colors.grey[600], fontSize: r.fs(13)),
                 ),
               ],
             ),
           ),
-          Icon(Icons.check_circle_rounded, color: Colors.green, size: 36 * scaleFactor),
+          Icon(Icons.check_circle_rounded, color: Colors.green, size: r.w(36)),
         ],
       ),
     );
@@ -279,17 +269,13 @@ class _AudioPlayerCard extends StatelessWidget {
   final AudioController audioController;
   final Color accentColor;
   final Function(Duration) formatDuration;
-  final double scaleFactor;
-  final double scaleFactorHeight;
-  final double textScaleFactor;
+  final ResponsiveHelper r;
 
   const _AudioPlayerCard({
     required this.audioController,
     required this.accentColor,
     required this.formatDuration,
-    required this.scaleFactor,
-    required this.scaleFactorHeight,
-    required this.textScaleFactor,
+    required this.r,
   });
 
   @override
@@ -297,16 +283,16 @@ class _AudioPlayerCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20 * scaleFactor),
+        borderRadius: BorderRadius.circular(r.w(20)),
         boxShadow: [
           BoxShadow(
             color: Colors.black12.withOpacity(0.05),
-            blurRadius: 10 * scaleFactor,
-            offset: Offset(0, 5 * scaleFactorHeight),
+            blurRadius: r.w(10),
+            offset: Offset(0, r.h(5)),
           ),
         ],
       ),
-      padding: EdgeInsets.symmetric(horizontal: 20 * scaleFactor, vertical: 24 * scaleFactorHeight),
+      padding: EdgeInsets.symmetric(horizontal: r.w(20), vertical: r.h(24)),
       child: Column(
         children: [
           Obx(() {
@@ -314,8 +300,6 @@ class _AudioPlayerCard extends StatelessWidget {
             final position = audioController.position.value;
             final duration = audioController.duration.value;
 
-            // shouldPulse is FALSE when the audio is complete (position == duration)
-            // OR when isPlaying is false (which is set on completion now)
             final shouldPulse = isPlaying && position < duration;
 
             return _PulsatingPlayButton(
@@ -323,15 +307,15 @@ class _AudioPlayerCard extends StatelessWidget {
               shouldPulse: shouldPulse,
               accentColor: accentColor,
               onPressed: () => audioController.togglePlayback(),
-              scaleFactor: scaleFactor,
+              r: r,
             );
           }),
-          SizedBox(height: 20 * scaleFactorHeight),
+          SizedBox(height: r.h(20)),
           Obx(() => SliderTheme(
             data: SliderTheme.of(context).copyWith(
-              trackHeight: 4.0 * scaleFactorHeight,
-              thumbShape: RoundSliderThumbShape(enabledThumbRadius: 8.0 * scaleFactor),
-              overlayShape: RoundSliderOverlayShape(overlayRadius: 16.0 * scaleFactor),
+              trackHeight: r.h(4),
+              thumbShape: RoundSliderThumbShape(enabledThumbRadius: r.w(8)),
+              overlayShape: RoundSliderOverlayShape(overlayRadius: r.w(16)),
             ),
             child: Slider(
               value: audioController.position.value.inSeconds.toDouble(),
@@ -343,14 +327,18 @@ class _AudioPlayerCard extends StatelessWidget {
             ),
           )),
           Obx(() => Padding(
-            padding: EdgeInsets.symmetric(horizontal: 4.0 * scaleFactor),
+            padding: EdgeInsets.symmetric(horizontal: r.w(4)),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(formatDuration(audioController.position.value),
-                    style: TextStyle(color: Colors.grey[700], fontSize: 13 * scaleFactor * textScaleFactor)),
-                Text(formatDuration(audioController.duration.value),
-                    style: TextStyle(color: Colors.grey[700], fontSize: 13 * scaleFactor * textScaleFactor)),
+                Text(
+                  formatDuration(audioController.position.value),
+                  style: TextStyle(color: Colors.grey[700], fontSize: r.fs(13)),
+                ),
+                Text(
+                  formatDuration(audioController.duration.value),
+                  style: TextStyle(color: Colors.grey[700], fontSize: r.fs(13)),
+                ),
               ],
             ),
           )),
@@ -365,14 +353,14 @@ class _PulsatingPlayButton extends StatefulWidget {
   final bool shouldPulse;
   final Color accentColor;
   final VoidCallback onPressed;
-  final double scaleFactor;
+  final ResponsiveHelper r;
 
   const _PulsatingPlayButton({
     required this.isPlaying,
     required this.shouldPulse,
     required this.accentColor,
     required this.onPressed,
-    required this.scaleFactor,
+    required this.r,
   });
 
   @override
@@ -412,7 +400,7 @@ class _PulsatingPlayButtonState extends State<_PulsatingPlayButton>
         _animationController.repeat(reverse: true);
       } else {
         _animationController.stop();
-        _animationController.value = 0.0; // Reset scale to 1.0
+        _animationController.value = 0.0;
       }
     }
   }
@@ -433,8 +421,8 @@ class _PulsatingPlayButtonState extends State<_PulsatingPlayButton>
             ? (1.0 - _animationController.value) * 0.5
             : 0.0;
 
-        final baseSize = 80.0 * widget.scaleFactor;
-        final iconSize = 72.0 * widget.scaleFactor;
+        final baseSize = widget.r.w(80);
+        final iconSize = widget.r.w(72);
 
         return Stack(
           alignment: Alignment.center,
@@ -470,18 +458,14 @@ class _ActionButtonsRow extends StatelessWidget {
   final AudioController audioController;
   final String audioPath;
   final String fileName;
-  final double scaleFactor;
-  final double scaleFactorHeight;
-  final double textScaleFactor;
+  final ResponsiveHelper r;
 
   const _ActionButtonsRow({
     required this.accentColor,
     required this.audioController,
     required this.audioPath,
     required this.fileName,
-    required this.scaleFactor,
-    required this.scaleFactorHeight,
-    required this.textScaleFactor,
+    required this.r,
   });
 
   void shareContent({required String text, String? filePath}) async {
@@ -505,25 +489,26 @@ class _ActionButtonsRow extends StatelessWidget {
           icon: Icons.folder,
           label: 'Location',
           accentColor: accentColor,
-          scaleFactor: scaleFactor,
-          scaleFactorHeight: scaleFactorHeight,
-          textScaleFactor: textScaleFactor,
+          r: r,
           onPressed: () {
-            // Correctly navigate to OutputScreen (assuming it's your library screen)
+            // 🔥 STOP audio before going to next screen
+            audioController.audioPlayer.stop();
+            audioController.isPlaying.value = false;
+
+            // Now navigate
             Get.to(() => const OutputScreen(), transition: Transition.fade);
-            audioController.audioPlayer.dispose();
           },
+
         ),
         _ActionButtonTile(
           icon: Icons.share_rounded,
           label: 'Share',
           accentColor: accentColor,
-          scaleFactor: scaleFactor,
-          scaleFactorHeight: scaleFactorHeight,
-          textScaleFactor: textScaleFactor,
+          r: r,
           onPressed: () {
+            // ✅ Share WITHOUT disposing audio
             shareContent(text: fileName, filePath: audioPath);
-            audioController.audioPlayer.dispose();
+            // Audio keeps playing!
           },
         ),
       ],
@@ -536,18 +521,14 @@ class _ActionButtonTile extends StatefulWidget {
   final String label;
   final Color accentColor;
   final VoidCallback onPressed;
-  final double scaleFactor;
-  final double scaleFactorHeight;
-  final double textScaleFactor;
+  final ResponsiveHelper r;
 
   const _ActionButtonTile({
     required this.icon,
     required this.label,
     required this.accentColor,
     required this.onPressed,
-    required this.scaleFactor,
-    required this.scaleFactorHeight,
-    required this.textScaleFactor,
+    required this.r,
   });
 
   @override
@@ -603,25 +584,25 @@ class _ActionButtonTileState extends State<_ActionButtonTile>
             child: Column(
               children: [
                 Container(
-                  width: 65 * widget.scaleFactor,
-                  height: 65 * widget.scaleFactor,
+                  width: widget.r.w(65),
+                  height: widget.r.w(65),
                   decoration: BoxDecoration(
                     color: Colors.grey.shade200,
-                    borderRadius: BorderRadius.circular(16 * widget.scaleFactor),
+                    borderRadius: BorderRadius.circular(widget.r.w(16)),
                   ),
                   child: Icon(
                     widget.icon,
-                    size: 32 * widget.scaleFactor,
+                    size: widget.r.w(32),
                     color: widget.accentColor,
                   ),
                 ),
-                SizedBox(height: 8 * widget.scaleFactorHeight),
+                SizedBox(height: widget.r.h(8)),
                 Text(
                   widget.label,
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
                     color: Colors.black87,
-                    fontSize: 14 * widget.scaleFactor * widget.textScaleFactor,
+                    fontSize: widget.r.fs(14),
                   ),
                 ),
               ],

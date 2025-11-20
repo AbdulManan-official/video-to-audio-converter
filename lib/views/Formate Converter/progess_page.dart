@@ -5,6 +5,7 @@ import 'package:video_to_audio_converter/utils/utils.dart';
 import 'package:video_to_audio_converter/views/home_page.dart';
 import '../../controllers/fromate_audio_controller.dart';
 import '../../controllers/merge_controller.dart';
+import '../../utils/responsive_helper.dart';
 import 'dart:math';
 import 'dart:io';
 
@@ -58,11 +59,7 @@ class _ConversionProgressPageState extends State<ConversionProgressPage> {
 
   // Show duplicate file handling dialog
   Future<bool?> _showDuplicateDialog(List<String> duplicateFiles) async {
-    final mediaQuery = MediaQuery.of(context);
-    const double referenceWidth = 375.0;
-    final double scaleFactor = mediaQuery.size.width / referenceWidth;
-    final double scaleFactorHeight = mediaQuery.size.height / 812.0;
-    final double textScaleFactor = mediaQuery.textScaleFactor;
+    final r = ResponsiveHelper(context);
 
     return await showDialog<bool>(
       context: context,
@@ -70,11 +67,11 @@ class _ConversionProgressPageState extends State<ConversionProgressPage> {
       builder: (BuildContext context) {
         return Dialog(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20 * scaleFactor),
+            borderRadius: BorderRadius.circular(r.w(20)),
           ),
           child: SingleChildScrollView(
             child: Container(
-              padding: EdgeInsets.all(24 * scaleFactor),
+              padding: EdgeInsets.all(r.w(24)),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -83,23 +80,23 @@ class _ConversionProgressPageState extends State<ConversionProgressPage> {
                   Row(
                     children: [
                       Container(
-                        padding: EdgeInsets.all(10 * scaleFactor),
+                        padding: EdgeInsets.all(r.w(10)),
                         decoration: BoxDecoration(
                           color: Colors.orange[50],
-                          borderRadius: BorderRadius.circular(10 * scaleFactor),
+                          borderRadius: BorderRadius.circular(r.w(10)),
                         ),
                         child: Icon(
                           Icons.warning_amber_rounded,
                           color: Colors.orange[700],
-                          size: 24 * scaleFactor,
+                          size: r.w(24),
                         ),
                       ),
-                      SizedBox(width: 12 * scaleFactor),
+                      SizedBox(width: r.w(12)),
                       Expanded(
                         child: Text(
                           "Duplicate Files",
                           style: TextStyle(
-                            fontSize: 18 * scaleFactor * textScaleFactor,
+                            fontSize: r.fs(18),
                             fontWeight: FontWeight.bold,
                             color: Colors.black87,
                           ),
@@ -107,17 +104,17 @@ class _ConversionProgressPageState extends State<ConversionProgressPage> {
                       ),
                     ],
                   ),
-                  SizedBox(height: 16 * scaleFactorHeight),
+                  SizedBox(height: r.h(16)),
 
                   // Description
                   Text(
                     "${duplicateFiles.length} ${duplicateFiles.length == 1 ? 'file' : 'files'} already exist. Choose an option:",
                     style: TextStyle(
-                      fontSize: 13 * scaleFactor * textScaleFactor,
+                      fontSize: r.fs(13),
                       color: Colors.grey[700],
                     ),
                   ),
-                  SizedBox(height: 16 * scaleFactorHeight),
+                  SizedBox(height: r.h(16)),
 
                   // Option 1: Replace All
                   _buildOptionButton(
@@ -126,11 +123,8 @@ class _ConversionProgressPageState extends State<ConversionProgressPage> {
                     description: "Overwrite all files",
                     color: Colors.red,
                     onTap: () => Navigator.of(context).pop(true),
-                    scaleFactor: scaleFactor,
-                    textScaleFactor: textScaleFactor,
-                    scaleFactorHeight: scaleFactorHeight,
                   ),
-                  SizedBox(height: 10 * scaleFactorHeight),
+                  SizedBox(height: r.h(10)),
 
                   // Option 2: Keep & Rename
                   _buildOptionButton(
@@ -139,23 +133,20 @@ class _ConversionProgressPageState extends State<ConversionProgressPage> {
                     description: "Rename as file (1).mp3, file (2).mp3...",
                     color: const Color(0xFF6C63FF),
                     onTap: () => Navigator.of(context).pop(false),
-                    scaleFactor: scaleFactor,
-                    textScaleFactor: textScaleFactor,
-                    scaleFactorHeight: scaleFactorHeight,
                   ),
-                  SizedBox(height: 12 * scaleFactorHeight),
+                  SizedBox(height: r.h(12)),
 
                   // Cancel Button
                   TextButton(
                     onPressed: () => Navigator.of(context).pop(null),
                     style: TextButton.styleFrom(
-                      minimumSize: Size(double.infinity, 40 * scaleFactorHeight),
+                      minimumSize: Size(double.infinity, r.h(40)),
                     ),
                     child: Text(
                       "Cancel",
                       style: TextStyle(
                         color: Colors.grey,
-                        fontSize: 14 * scaleFactor * textScaleFactor,
+                        fontSize: r.fs(14),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -175,30 +166,29 @@ class _ConversionProgressPageState extends State<ConversionProgressPage> {
     required String description,
     required Color color,
     required VoidCallback onTap,
-    required double scaleFactor,
-    required double textScaleFactor,
-    required double scaleFactorHeight,
   }) {
+    final r = ResponsiveHelper(context);
+
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12 * scaleFactor),
+      borderRadius: BorderRadius.circular(r.w(12)),
       child: Container(
-        padding: EdgeInsets.all(14 * scaleFactor),
+        padding: EdgeInsets.all(r.w(14)),
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey[300]!, width: 1 * scaleFactor),
-          borderRadius: BorderRadius.circular(12 * scaleFactor),
+          border: Border.all(color: Colors.grey[300]!, width: r.w(1)),
+          borderRadius: BorderRadius.circular(r.w(12)),
         ),
         child: Row(
           children: [
             Container(
-              padding: EdgeInsets.all(8 * scaleFactor),
+              padding: EdgeInsets.all(r.w(8)),
               decoration: BoxDecoration(
                 color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8 * scaleFactor),
+                borderRadius: BorderRadius.circular(r.w(8)),
               ),
-              child: Icon(icon, color: color, size: 20 * scaleFactor),
+              child: Icon(icon, color: color, size: r.w(20)),
             ),
-            SizedBox(width: 12 * scaleFactor),
+            SizedBox(width: r.w(12)),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -206,16 +196,16 @@ class _ConversionProgressPageState extends State<ConversionProgressPage> {
                   Text(
                     title,
                     style: TextStyle(
-                      fontSize: 14 * scaleFactor * textScaleFactor,
+                      fontSize: r.fs(14),
                       fontWeight: FontWeight.w600,
                       color: Colors.black87,
                     ),
                   ),
-                  SizedBox(height: 2 * scaleFactorHeight),
+                  SizedBox(height: r.h(2)),
                   Text(
                     description,
                     style: TextStyle(
-                      fontSize: 11 * scaleFactor * textScaleFactor,
+                      fontSize: r.fs(11),
                       color: Colors.grey[600],
                     ),
                     maxLines: 1,
@@ -224,7 +214,7 @@ class _ConversionProgressPageState extends State<ConversionProgressPage> {
                 ],
               ),
             ),
-            Icon(Icons.arrow_forward_ios, size: 14 * scaleFactor, color: Colors.grey[400]),
+            Icon(Icons.arrow_forward_ios, size: r.w(14), color: Colors.grey[400]),
           ],
         ),
       ),
@@ -274,13 +264,7 @@ class _ConversionProgressPageState extends State<ConversionProgressPage> {
 
   @override
   Widget build(BuildContext context) {
-    // --- Responsive Scaling Setup ---
-    final mediaQuery = MediaQuery.of(context);
-    const double referenceWidth = 375.0;
-    final double scaleFactor = mediaQuery.size.width / referenceWidth;
-    final double scaleFactorHeight = mediaQuery.size.height / 812.0;
-    final double textScaleFactor = mediaQuery.textScaleFactor;
-    // -------------------------------
+    final r = ResponsiveHelper(context);
 
     return Scaffold(
       backgroundColor: Colors.grey[100],
@@ -289,22 +273,27 @@ class _ConversionProgressPageState extends State<ConversionProgressPage> {
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.black, size: 24 * scaleFactor),
+          icon: Icon(Icons.arrow_back, color: Colors.black, size: r.w(24)),
           onPressed: () => Navigator.pop(context),
         ),
         title: Padding(
-          padding: EdgeInsets.only(left: 4.0 * scaleFactor),
+          padding: EdgeInsets.only(left: r.isTablet() ? r.w(16) : r.w(4)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 "Conversion Progress",
                 style: TextStyle(
                   color: Colors.black,
                   fontWeight: FontWeight.w600,
-                  fontSize: 18 * scaleFactor * textScaleFactor,
+                  fontSize: r.fs(18),
+                  height: 1.2,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
+              SizedBox(height: r.h(2)),
               Obx(() {
                 int completed = getCompletedCount();
                 int total = formateController.selectedFiles.length;
@@ -313,24 +302,26 @@ class _ConversionProgressPageState extends State<ConversionProgressPage> {
                       ? "Converting files..."
                       : "$completed of $total completed",
                   style: TextStyle(
-                    fontSize: 12 * scaleFactor * textScaleFactor,
+                    fontSize: r.fs(13),
                     color: Colors.grey[600],
-                    fontWeight: FontWeight.normal,
+                    fontWeight: FontWeight.w400,
+                    height: 1.2,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 );
               }),
             ],
           ),
         ),
+        toolbarHeight: r.h(70),
         actions: [
           Obx(() {
             bool allDone = getCompletedCount() == formateController.selectedFiles.length;
             return allDone
                 ? IconButton(
-              icon: Icon(Icons.home, color: Colors.black, size: 24 * scaleFactor),
+              icon: Icon(Icons.home, color: Colors.black, size: r.w(24)),
               onPressed: () {
-                // NOTE: Keeping the original code that navigates to HomeScreen without the import.
-                // It is assumed HomeScreen is available in your project scope.
                 Get.offAll(() => HomeScreen());
               },
             )
@@ -349,20 +340,23 @@ class _ConversionProgressPageState extends State<ConversionProgressPage> {
                 final progressValue = getTotalProgress();
 
                 return Container(
-                  margin: EdgeInsets.all(16 * scaleFactor),
-                  padding: EdgeInsets.symmetric(horizontal: 20 * scaleFactor, vertical: 20 * scaleFactorHeight),
+                  margin: EdgeInsets.all(r.w(16)),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: r.w(20),
+                    vertical: r.h(20),
+                  ),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
                       colors: [Color(0xFF6C63FF), Color(0xFF6C63FF)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
-                    borderRadius: BorderRadius.circular(16 * scaleFactor),
+                    borderRadius: BorderRadius.circular(r.w(16)),
                     boxShadow: [
                       BoxShadow(
                         color: const Color(0xFF6C63FF).withOpacity(0.2),
-                        blurRadius: 12 * scaleFactor,
-                        offset: Offset(0, 4 * scaleFactorHeight),
+                        blurRadius: r.w(12),
+                        offset: Offset(0, r.h(4)),
                       ),
                     ],
                   ),
@@ -372,100 +366,113 @@ class _ConversionProgressPageState extends State<ConversionProgressPage> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            "Overall Conversion Status",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 15 * scaleFactor * textScaleFactor,
-                              fontWeight: FontWeight.w600,
+                          Expanded(
+                            child: Text(
+                              "Overall Conversion Status",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: r.fs(15),
+                                fontWeight: FontWeight.w600,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
+                          SizedBox(width: r.w(8)),
                           Text(
                             "${(progressValue * 100).toStringAsFixed(0)}%",
                             style: TextStyle(
                               color: Colors.white,
-                              fontSize: 20 * scaleFactor * textScaleFactor,
+                              fontSize: r.fs(20),
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                         ],
                       ),
-                      SizedBox(height: 12 * scaleFactorHeight),
+                      SizedBox(height: r.h(12)),
                       ClipRRect(
-                        borderRadius: BorderRadius.circular(8 * scaleFactor),
+                        borderRadius: BorderRadius.circular(r.w(8)),
                         child: LinearProgressIndicator(
                           value: progressValue,
                           backgroundColor: Colors.white.withOpacity(0.3),
                           valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
-                          minHeight: 12 * scaleFactorHeight,
+                          minHeight: r.h(12),
                         ),
                       ),
-                      SizedBox(height: 20 * scaleFactorHeight),
+                      SizedBox(height: r.h(20)),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "Completed",
-                                style: TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 12 * scaleFactor * textScaleFactor,
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "Completed",
+                                  style: TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: r.fs(12),
+                                  ),
                                 ),
-                              ),
-                              SizedBox(height: 2 * scaleFactorHeight),
-                              Text(
-                                "$completedFiles",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 24 * scaleFactor * textScaleFactor,
-                                  fontWeight: FontWeight.bold,
+                                SizedBox(height: r.h(2)),
+                                Text(
+                                  "$completedFiles",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: r.fs(24),
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Text(
-                                "Total Files",
-                                style: TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 12 * scaleFactor * textScaleFactor,
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Text(
+                                  "Total Files",
+                                  style: TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: r.fs(12),
+                                  ),
                                 ),
-                              ),
-                              SizedBox(height: 2 * scaleFactorHeight),
-                              Text(
-                                "$totalFiles",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 24 * scaleFactor * textScaleFactor,
-                                  fontWeight: FontWeight.bold,
+                                SizedBox(height: r.h(2)),
+                                Text(
+                                  "$totalFiles",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: r.fs(24),
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text(
-                                "Format",
-                                style: TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 12 * scaleFactor * textScaleFactor,
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  "Format",
+                                  style: TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: r.fs(12),
+                                  ),
                                 ),
-                              ),
-                              SizedBox(height: 2 * scaleFactorHeight),
-                              Text(
-                                formateController.selectedFormat.value,
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 24 * scaleFactor * textScaleFactor,
-                                  fontWeight: FontWeight.bold,
+                                SizedBox(height: r.h(2)),
+                                Text(
+                                  formateController.selectedFormat.value,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: r.fs(24),
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ],
                       ),
@@ -477,7 +484,7 @@ class _ConversionProgressPageState extends State<ConversionProgressPage> {
             // Files List
             Expanded(
               child: ListView.builder(
-                padding: EdgeInsets.symmetric(horizontal: 16 * scaleFactor),
+                padding: EdgeInsets.symmetric(horizontal: r.w(16)),
                 itemCount: formateController.selectedFiles.length,
                 itemBuilder: (context, index) {
                   final fileName = getFormattedFileName(formateController.selectedFiles[index]);
@@ -485,37 +492,37 @@ class _ConversionProgressPageState extends State<ConversionProgressPage> {
                   final isCompleted = progress.value >= 1.0;
 
                   return Container(
-                    margin: EdgeInsets.only(bottom: 12 * scaleFactorHeight),
-                    padding: EdgeInsets.all(16 * scaleFactor),
+                    margin: EdgeInsets.only(bottom: r.h(12)),
+                    padding: EdgeInsets.all(r.w(16)),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(16 * scaleFactor),
+                      borderRadius: BorderRadius.circular(r.w(16)),
                       border: Border.all(
                         color: isCompleted ? Colors.black.withOpacity(0.2) : Colors.grey[200]!,
-                        width: 1 * scaleFactor,
+                        width: r.w(1),
                       ),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withOpacity(0.03),
-                          blurRadius: 8 * scaleFactor,
-                          offset: Offset(0, 2 * scaleFactorHeight),
+                          blurRadius: r.w(8),
+                          offset: Offset(0, r.h(2)),
                         ),
                       ],
                     ),
                     child: Row(
                       children: [
                         Container(
-                          width: 50 * scaleFactor,
-                          height: 50 * scaleFactor,
+                          width: r.w(50),
+                          height: r.w(50),
                           decoration: BoxDecoration(
                             color: const Color(0xFF6C63FF),
-                            borderRadius: BorderRadius.circular(12 * scaleFactor),
+                            borderRadius: BorderRadius.circular(r.w(12)),
                           ),
                           child: isCompleted
                               ? Icon(
                             Icons.audio_file,
                             color: Colors.white,
-                            size: 32 * scaleFactor,
+                            size: r.w(32),
                           )
                               : Stack(
                             alignment: Alignment.center,
@@ -523,15 +530,15 @@ class _ConversionProgressPageState extends State<ConversionProgressPage> {
                               Icon(
                                 Icons.audio_file,
                                 color: Colors.white,
-                                size: 28 * scaleFactor,
+                                size: r.w(28),
                               ),
                               if (progress.value > 0 && progress.value < 1.0)
                                 SizedBox(
-                                  width: 56 * scaleFactor,
-                                  height: 56 * scaleFactor,
+                                  width: r.w(56),
+                                  height: r.w(56),
                                   child: CircularProgressIndicator(
                                     value: progress.value,
-                                    strokeWidth: 3 * scaleFactor,
+                                    strokeWidth: r.w(3),
                                     backgroundColor: Colors.transparent,
                                     valueColor: const AlwaysStoppedAnimation<Color>(
                                       Color(0xFF6C63FF),
@@ -541,7 +548,7 @@ class _ConversionProgressPageState extends State<ConversionProgressPage> {
                             ],
                           ),
                         ),
-                        SizedBox(width: 16 * scaleFactor),
+                        SizedBox(width: r.w(16)),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -552,25 +559,25 @@ class _ConversionProgressPageState extends State<ConversionProgressPage> {
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                   fontWeight: FontWeight.w600,
-                                  fontSize: 14 * scaleFactor * textScaleFactor,
+                                  fontSize: r.fs(14),
                                   color: isCompleted ? Colors.black : Colors.black,
                                 ),
                               ),
-                              SizedBox(height: 8 * scaleFactorHeight),
+                              SizedBox(height: r.h(8)),
                               if (isCompleted) ...[
                                 Text(
                                   'Size: ${formatBytes(1500000, 2)}',
                                   style: TextStyle(
-                                    fontSize: 12 * scaleFactor * textScaleFactor,
+                                    fontSize: r.fs(12),
                                     color: Colors.grey[600],
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
-                                SizedBox(height: 4 * scaleFactorHeight),
+                                SizedBox(height: r.h(4)),
                                 Text(
                                   "Conversion complete",
                                   style: TextStyle(
-                                    fontSize: 12 * scaleFactor * textScaleFactor,
+                                    fontSize: r.fs(12),
                                     color: Colors.grey[600],
                                     fontWeight: FontWeight.w500,
                                   ),
@@ -578,23 +585,23 @@ class _ConversionProgressPageState extends State<ConversionProgressPage> {
                               ] else ...[
                                 Obx(() {
                                   return ClipRRect(
-                                    borderRadius: BorderRadius.circular(8 * scaleFactor),
+                                    borderRadius: BorderRadius.circular(r.w(8)),
                                     child: LinearProgressIndicator(
                                       value: progress.value,
                                       backgroundColor: Colors.grey[200],
                                       valueColor: const AlwaysStoppedAnimation<Color>(
                                         Color(0xFF6C63FF),
                                       ),
-                                      minHeight: 6 * scaleFactorHeight,
+                                      minHeight: r.h(6),
                                     ),
                                   );
                                 }),
-                                SizedBox(height: 6 * scaleFactorHeight),
+                                SizedBox(height: r.h(6)),
                                 Obx(() {
                                   return Text(
                                     '${(progress.value * 100).toStringAsFixed(0)}%',
                                     style: TextStyle(
-                                      fontSize: 12 * scaleFactor * textScaleFactor,
+                                      fontSize: r.fs(12),
                                       color: Colors.grey[600],
                                       fontWeight: FontWeight.w500,
                                     ),
@@ -614,14 +621,14 @@ class _ConversionProgressPageState extends State<ConversionProgressPage> {
             // Success Button
             if (!formateController.isConverting.value)
               Container(
-                padding: EdgeInsets.all(16 * scaleFactor),
+                padding: EdgeInsets.all(r.w(16)),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.05),
-                      blurRadius: 10 * scaleFactor,
-                      offset: Offset(0, -2 * scaleFactorHeight),
+                      blurRadius: r.w(10),
+                      offset: Offset(0, -r.h(2)),
                     ),
                   ],
                 ),
@@ -631,23 +638,22 @@ class _ConversionProgressPageState extends State<ConversionProgressPage> {
                     children: [
                       ElevatedButton.icon(
                         onPressed: () {
-                          // NOTE: Keeping the original code that navigates to OutputScreen.
                           Get.to(() => const OutputScreen());
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF6C63FF),
-                          minimumSize: Size(double.infinity, 54 * scaleFactorHeight),
+                          minimumSize: Size(double.infinity, r.h(54)),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12 * scaleFactor),
+                            borderRadius: BorderRadius.circular(r.w(12)),
                           ),
                           elevation: 0,
                         ),
-                        icon: Icon(Icons.folder_open, color: Colors.white, size: 22 * scaleFactor),
+                        icon: Icon(Icons.folder_open, color: Colors.white, size: r.w(22)),
                         label: Text(
                           'Go To Folder',
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 16 * scaleFactor * textScaleFactor,
+                            fontSize: r.fs(16),
                             fontWeight: FontWeight.w600,
                           ),
                         ),
