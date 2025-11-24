@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart'; // ✅ NEW IMPORT
 import 'package:video_to_audio_converter/views/home_page.dart';
 import '../controllers/audio_controller.dart';
 import '../main.dart';
@@ -32,6 +33,10 @@ class _AudioSavedScreenState extends State<AudioSavedScreen> with SingleTickerPr
   late AnimationController _bodyAnimationController;
   late Animation<double> _scaleAnimation;
   late Animation<double> _opacityAnimation;
+
+  // ✅ BANNER AD STATE
+  BannerAd? _bannerAd;
+  bool _isAdLoaded = false;
 
   @override
   void initState() {
@@ -67,11 +72,37 @@ class _AudioSavedScreenState extends State<AudioSavedScreen> with SingleTickerPr
     );
 
     _bodyAnimationController.forward();
+
+    // ✅ Load the banner ad
+    _loadBannerAd();
+  }
+
+  // ✅ BANNER AD LOADING LOGIC
+  void _loadBannerAd() {
+    _bannerAd = BannerAd(
+      // Use test ad unit ID for development
+      adUnitId: 'ca-app-pub-3940256099942544/6300978111',
+      size: AdSize.banner,
+      request: const AdRequest(),
+      listener: BannerAdListener(
+        onAdLoaded: (_) {
+          setState(() {
+            _isAdLoaded = true;
+          });
+        },
+        onAdFailedToLoad: (ad, error) {
+          debugPrint('Banner ad failed to load: $error');
+          ad.dispose();
+        },
+      ),
+    );
+    _bannerAd!.load();
   }
 
   @override
   void dispose() {
     _bodyAnimationController.dispose();
+    _bannerAd?.dispose(); // ✅ Dispose banner ad
     // ✅ DON'T dispose audio player here - let it persist when navigating
     // Only dispose when explicitly needed (e.g., going home)
     super.dispose();
@@ -161,6 +192,33 @@ class _AudioSavedScreenState extends State<AudioSavedScreen> with SingleTickerPr
                       fileName: widget.fileName,
                       r: r,
                     ),
+                    SizedBox(height: r.h(30)), // Extra space before ad
+
+                    // ✅ BANNER AD WIDGET
+                    if (_isAdLoaded && _bannerAd != null)
+                      Container(
+                        alignment: Alignment.center,
+                        width: _bannerAd!.size.width.toDouble(),
+                        height: _bannerAd!.size.height.toDouble(),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(r.w(10)),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: r.w(5),
+                              offset: Offset(0, r.h(2)),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(r.w(10)),
+                          child: AdWidget(ad: _bannerAd!),
+                        ),
+                      ),
+
+                    if (!_isAdLoaded)
+                      SizedBox(height: r.h(60)), // Placeholder for a standard banner size
                   ],
                 ),
               ),
@@ -186,6 +244,9 @@ class _AudioSavedScreenState extends State<AudioSavedScreen> with SingleTickerPr
     return "$minutes:$seconds";
   }
 }
+
+// ... (Rest of the classes: _AudioInfoCard, _AudioPlayerCard, _PulsatingPlayButton, _ActionButtonsRow, _ActionButtonTile remain unchanged)
+// ... (The rest of the code is omitted for brevity, but you should replace the full file content with the above)
 
 class _AudioInfoCard extends StatelessWidget {
   final Color accentColor;

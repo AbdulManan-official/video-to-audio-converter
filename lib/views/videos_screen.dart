@@ -228,8 +228,22 @@ class DashedBorderPainter extends CustomPainter {
 // ==========================================
 // MAIN VIDEO VIEW SCREEN
 // ==========================================
-class VideoView extends StatelessWidget {
+class VideoView extends StatefulWidget {
   const VideoView({super.key});
+
+  @override
+  State<VideoView> createState() => _VideoViewState();
+}
+
+class _VideoViewState extends State<VideoView> {
+  final TextEditingController _searchController = TextEditingController();
+  final RxString searchQuery = ''.obs;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   Future<void> _pickVideo(VideoController videoController) async {
     try {
@@ -258,7 +272,7 @@ class VideoView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final VideoController videoController = Get.put(VideoController());
-    final r = ResponsiveHelper(context); // Initialize responsive helper
+    final r = ResponsiveHelper(context);
 
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
@@ -275,7 +289,7 @@ class VideoView extends StatelessWidget {
         ),
         centerTitle: false,
         title: Padding(
-          padding: EdgeInsets.only(left: r.isTablet() ? r.w(16) : 0), // extra space for iPad
+          padding: EdgeInsets.only(left: r.isTablet() ? r.w(16) : 0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
@@ -306,9 +320,8 @@ class VideoView extends StatelessWidget {
             ],
           ),
         ),
-        toolbarHeight: r.h(70), // Responsive toolbar height
+        toolbarHeight: r.h(70),
       ),
-
       body: Obx(() {
         if (videoController.isLoading.value) {
           return const Center(
@@ -317,6 +330,12 @@ class VideoView extends StatelessWidget {
             ),
           );
         }
+
+        // Filter videos based on search query
+        final filteredVideos = videoController.videos.where((video) {
+          final fileName = path.basenameWithoutExtension(video.path).toLowerCase();
+          return fileName.contains(searchQuery.value.toLowerCase());
+        }).toList();
 
         return CustomScrollView(
           slivers: [
@@ -397,33 +416,107 @@ class VideoView extends StatelessWidget {
               ),
             ),
 
-            // Quick Access Header
+            // Search Bar Section
             if (videoController.videos.isNotEmpty)
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: r.w(16),
-                    vertical: r.h(8),
-                  ),
-                  child: Text(
-                    'Quick Access',
-                    style: TextStyle(
-                      fontSize: r.fs(16),
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
+                  padding: EdgeInsets.symmetric(horizontal: r.w(16)),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(r.w(12)),
+                      border: Border.all(
+                        color: Colors.grey[300]!,
+                        width: r.w(1),
+                      ),
+                    ),
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: (value) {
+                        searchQuery.value = value;
+                      },
+                      decoration: InputDecoration(
+                        hintText: 'Search videos...',
+                        hintStyle: TextStyle(
+                          color: Colors.grey[500],
+                          fontSize: r.fs(14),
+                        ),
+                        prefixIcon: Icon(
+                          Icons.search,
+                          color: Colors.grey[600],
+                          size: r.w(20),
+                        ),
+                        suffixIcon: Obx(() => searchQuery.value.isNotEmpty
+                            ? IconButton(
+                          icon: Icon(
+                            Icons.clear,
+                            color: Colors.grey[600],
+                            size: r.w(20),
+                          ),
+                          onPressed: () {
+                            _searchController.clear();
+                            searchQuery.value = '';
+                          },
+                        )
+                            : const SizedBox.shrink()),
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: r.w(16),
+                          vertical: r.h(12),
+                        ),
+                      ),
+                      style: TextStyle(
+                        fontSize: r.fs(14),
+                        color: Colors.black87,
+                      ),
                     ),
                   ),
                 ),
               ),
 
-            // Video List - Using InteractiveBox
+            // Quick Access Header
             if (videoController.videos.isNotEmpty)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    r.w(16),
+                    r.h(16),
+                    r.w(16),
+                    r.h(8),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Quick Access',
+                        style: TextStyle(
+                          fontSize: r.fs(16),
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      Obx(() => searchQuery.value.isNotEmpty
+                          ? Text(
+                        '${filteredVideos.length} result${filteredVideos.length != 1 ? 's' : ''}',
+                        style: TextStyle(
+                          fontSize: r.fs(13),
+                          color: Colors.grey[600],
+                        ),
+                      )
+                          : const SizedBox.shrink()),
+                    ],
+                  ),
+                ),
+              ),
+
+            // Video List - Using InteractiveBox
+            if (filteredVideos.isNotEmpty)
               SliverPadding(
                 padding: EdgeInsets.symmetric(horizontal: r.w(16)),
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate(
                         (context, index) {
-                      final video = videoController.videos[index];
+                      final video = filteredVideos[index];
                       var mbSize = videoController.getFileSizeInMB(video.path);
 
                       return Padding(
@@ -519,7 +612,43 @@ class VideoView extends StatelessWidget {
                         ),
                       );
                     },
-                    childCount: videoController.videos.length,
+                    childCount: filteredVideos.length,
+                  ),
+                ),
+              ),
+
+            // No Search Results
+            if (videoController.videos.isNotEmpty && filteredVideos.isEmpty)
+              SliverToBoxAdapter(
+                child: Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(r.w(32)),
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.search_off,
+                          size: r.w(64),
+                          color: Colors.grey[400],
+                        ),
+                        SizedBox(height: r.h(16)),
+                        Text(
+                          'No videos found',
+                          style: TextStyle(
+                            fontSize: r.fs(16),
+                            color: Colors.grey[600],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        SizedBox(height: r.h(8)),
+                        Text(
+                          'Try a different search term',
+                          style: TextStyle(
+                            fontSize: r.fs(14),
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),

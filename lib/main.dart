@@ -9,7 +9,6 @@ import 'package:just_audio/just_audio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:video_to_audio_converter/utils/prefs.dart';
-import 'package:video_to_audio_converter/views/splash_screen.dart';
 import 'views/home_page.dart';
 import 'package:share_plus/share_plus.dart';
 import './utils/waveform_audio_utils.dart';

@@ -37,6 +37,30 @@ class VideoPlaybackWidget extends StatefulWidget {
 }
 
 class _VideoPlaybackWidgetState extends State<VideoPlaybackWidget> {
+  bool _isFullScreen = false;
+
+  void _toggleFullScreen() {
+    setState(() {
+      _isFullScreen = !_isFullScreen;
+    });
+
+    if (_isFullScreen) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => _FullScreenVideoPlayer(
+            controller: widget.controller,
+            formatDuration: widget.formatDuration,
+            onExit: () {
+              setState(() {
+                _isFullScreen = false;
+              });
+            },
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final r = ResponsiveHelper(context);
@@ -50,14 +74,29 @@ class _VideoPlaybackWidgetState extends State<VideoPlaybackWidget> {
       );
     }
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(r.w(12)),
-      child: AspectRatio(
-        aspectRatio: widget.controller.value.aspectRatio,
+    // Set specific height and width for video container
+    final videoHeight = r.isTablet() ? r.h(300) : r.h(220);
+    final videoWidth = double.infinity;
+
+    return Container(
+      height: videoHeight,
+      width: videoWidth,
+      decoration: BoxDecoration(
+        color: Colors.black,
+        borderRadius: BorderRadius.circular(r.w(12)),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(r.w(12)),
         child: Stack(
-          alignment: Alignment.bottomCenter,
+          alignment: Alignment.center,
           children: [
-            VideoPlayer(widget.controller),
+            // Video Player centered and fitted
+            Center(
+              child: AspectRatio(
+                aspectRatio: widget.controller.value.aspectRatio,
+                child: VideoPlayer(widget.controller),
+              ),
+            ),
 
             // Play/Pause Overlay
             Positioned.fill(
@@ -98,7 +137,7 @@ class _VideoPlaybackWidgetState extends State<VideoPlaybackWidget> {
                   horizontal: r.w(10),
                   vertical: r.h(4),
                 ),
-                color: Colors.black.withOpacity(0.5),
+                color: Colors.black.withOpacity(0.7),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -134,7 +173,201 @@ class _VideoPlaybackWidgetState extends State<VideoPlaybackWidget> {
                       '${widget.formatDuration(widget.controller.value.position)} / ${widget.formatDuration(widget.controller.value.duration)}',
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: r.fs(12),
+                        fontSize: r.fs(11),
+                      ),
+                    ),
+                    SizedBox(width: r.w(4)),
+                    IconButton(
+                      onPressed: _toggleFullScreen,
+                      icon: Icon(
+                        Icons.fullscreen,
+                        color: Colors.white,
+                        size: r.w(24),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// --- FULLSCREEN VIDEO PLAYER ---
+
+class _FullScreenVideoPlayer extends StatefulWidget {
+  final VideoPlayerController controller;
+  final String Function(Duration) formatDuration;
+  final VoidCallback onExit;
+
+  const _FullScreenVideoPlayer({
+    required this.controller,
+    required this.formatDuration,
+    required this.onExit,
+  });
+
+  @override
+  State<_FullScreenVideoPlayer> createState() => _FullScreenVideoPlayerState();
+}
+
+class _FullScreenVideoPlayerState extends State<_FullScreenVideoPlayer> {
+  bool _showControls = true;
+
+  @override
+  void initState() {
+    super.initState();
+    // Auto-hide controls after 3 seconds
+    _hideControlsAfterDelay();
+  }
+
+  void _hideControlsAfterDelay() {
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted && widget.controller.value.isPlaying) {
+        setState(() {
+          _showControls = false;
+        });
+      }
+    });
+  }
+
+  void _toggleControls() {
+    setState(() {
+      _showControls = !_showControls;
+    });
+    if (_showControls) {
+      _hideControlsAfterDelay();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: GestureDetector(
+        onTap: _toggleControls,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // Video Player
+            Center(
+              child: AspectRatio(
+                aspectRatio: widget.controller.value.aspectRatio,
+                child: VideoPlayer(widget.controller),
+              ),
+            ),
+
+            // Controls Overlay
+            AnimatedOpacity(
+              opacity: _showControls ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 300),
+              child: Container(
+                color: Colors.black.withOpacity(0.3),
+                child: Column(
+                  children: [
+                    // Top Bar with Back Button
+                    SafeArea(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                        child: Row(
+                          children: [
+                            IconButton(
+                              onPressed: () {
+                                widget.onExit();
+                                Navigator.of(context).pop();
+                              },
+                              icon: const Icon(
+                                Icons.arrow_back,
+                                color: Colors.white,
+                                size: 28,
+                              ),
+                            ),
+                            const Spacer(),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    const Spacer(),
+
+                    // Center Play/Pause Button
+                    if (!widget.controller.value.isPlaying)
+                      IconButton(
+                        onPressed: () {
+                          setState(() {
+                            widget.controller.play();
+                          });
+                          _hideControlsAfterDelay();
+                        },
+                        icon: const Icon(
+                          Icons.play_circle_fill,
+                          color: Colors.white,
+                          size: 80,
+                        ),
+                      ),
+
+                    const Spacer(),
+
+                    // Bottom Controls
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      child: Column(
+                        children: [
+                          VideoProgressIndicator(
+                            widget.controller,
+                            allowScrubbing: true,
+                            colors: const VideoProgressColors(
+                              playedColor: primaryBlue,
+                              bufferedColor: Colors.grey,
+                              backgroundColor: Colors.black26,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              IconButton(
+                                onPressed: () {
+                                  setState(() {
+                                    widget.controller.value.isPlaying
+                                        ? widget.controller.pause()
+                                        : widget.controller.play();
+                                  });
+                                  if (widget.controller.value.isPlaying) {
+                                    _hideControlsAfterDelay();
+                                  }
+                                },
+                                icon: Icon(
+                                  widget.controller.value.isPlaying
+                                      ? Icons.pause_circle_filled
+                                      : Icons.play_circle_fill,
+                                  color: Colors.white,
+                                  size: 32,
+                                ),
+                              ),
+                              Text(
+                                '${widget.formatDuration(widget.controller.value.position)} / ${widget.formatDuration(widget.controller.value.duration)}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              IconButton(
+                                onPressed: () {
+                                  widget.onExit();
+                                  Navigator.of(context).pop();
+                                },
+                                icon: const Icon(
+                                  Icons.fullscreen_exit,
+                                  color: Colors.white,
+                                  size: 32,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
                   ],
