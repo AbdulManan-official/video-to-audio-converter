@@ -81,8 +81,8 @@ class _MergeAudioScreenState extends State<MergeAudioScreen> {
         formatConverterAudioFiles);
   }
 
-  Future<void> _fetchFilesFromDirectory(
-      String directoryPath, List<File> targetList) async {
+  Future<void> _fetchFilesFromDirectory(String directoryPath,
+      List<File> targetList) async {
     targetList.clear();
     Directory dir = Directory(directoryPath);
     if (await dir.exists()) {
@@ -94,10 +94,130 @@ class _MergeAudioScreenState extends State<MergeAudioScreen> {
           .toList();
 
       // ✅ Sort by modification time (newest first)
-      files.sort((a, b) => b.lastModifiedSync().compareTo(a.lastModifiedSync()));
+      files.sort((a, b) =>
+          b.lastModifiedSync().compareTo(a.lastModifiedSync()));
 
       targetList.addAll(files);
     }
+  }
+
+  Future<bool?> _showExitConfirmationDialog() async {
+    final mediaQuery = MediaQuery.of(context);
+    const double referenceWidth = 375.0;
+    final double scaleFactor = mediaQuery.size.width / referenceWidth;
+    final double textScaleFactor = mediaQuery.textScaleFactor;
+
+    return await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) =>
+          AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16 * scaleFactor),
+            ),
+            contentPadding: EdgeInsets.all(20 * scaleFactor),
+            title: Row(
+              children: [
+                Icon(
+                  Icons.warning_amber_rounded,
+                  color: Colors.orange[700],
+                  size: 28 * scaleFactor,
+                ),
+                SizedBox(width: 12 * scaleFactor),
+                Expanded(
+                  child: Text(
+                    'Merging in Progress',
+                    style: TextStyle(
+                      fontSize: 18 * scaleFactor * textScaleFactor,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            content: SizedBox(
+              width: MediaQuery
+                  .of(context)
+                  .size
+                  .width * 0.8,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Your audio files are currently being merged.',
+                    style: TextStyle(
+                      fontSize: 15 * scaleFactor * textScaleFactor,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  SizedBox(height: 12 * scaleFactor),
+                  Text(
+                    'If you exit now, the merge will be cancelled and your progress will be lost.',
+                    style: TextStyle(
+                      fontSize: 14 * scaleFactor * textScaleFactor,
+                      color: Colors.red[700],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  SizedBox(height: 12 * scaleFactor),
+                  Text(
+                    'Do you want to cancel the merge and exit?',
+                    style: TextStyle(
+                      fontSize: 14 * scaleFactor * textScaleFactor,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 20 * scaleFactor,
+                    vertical: 12 * scaleFactor,
+                  ),
+                ),
+                child: Text(
+                  'CONTINUE MERGING',
+                  style: TextStyle(
+                    fontSize: 14 * scaleFactor * textScaleFactor,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF6C63FF),
+                  ),
+                ),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 20 * scaleFactor,
+                    vertical: 12 * scaleFactor,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8 * scaleFactor),
+                  ),
+                ),
+                onPressed: () async {
+                  // ✅ Cancel the merge operation
+                  await controller.cancelMerge();
+                  Navigator.of(context).pop(true); // Allow exit
+                },
+                child: Text(
+                  'CANCEL & EXIT',
+                  style: TextStyle(
+                    fontSize: 14 * scaleFactor * textScaleFactor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+    );
   }
 
   Future<void> _fetchLocalAudioFiles(
@@ -187,57 +307,56 @@ class _MergeAudioScreenState extends State<MergeAudioScreen> {
     }
   }
 
-    List<File> _getAllFiles() {
-      return [
-        ...videoMusicFiles,
-        ...mergedAudioFiles,
-        ...formatConverterAudioFiles
-      ];
+  List<File> _getAllFiles() {
+    return [
+      ...videoMusicFiles,
+      ...mergedAudioFiles,
+      ...formatConverterAudioFiles
+    ];
+  }
+
+  List<File> _getCurrentFiles() {
+    List<File> files;
+    switch (_selectedTabIndex) {
+      case 0:
+        files = [
+          ...videoMusicFiles,
+          ...mergedAudioFiles,
+          ...formatConverterAudioFiles
+        ];
+        // ✅ Safe sort for combined list
+        try {
+          files.sort((a, b) {
+            try {
+              return b.lastModifiedSync().compareTo(a.lastModifiedSync());
+            } catch (e) {
+              return 0;
+            }
+          });
+        } catch (e) {
+          // If sorting fails, use unsorted list
+        }
+        break;
+      case 1:
+        files = videoMusicFiles;
+        break;
+      case 2:
+        files = mergedAudioFiles;
+        break;
+      case 3:
+        files = formatConverterAudioFiles;
+        break;
+      case 4:
+        files = localMusicFiles;
+        break;
+      default:
+        files = [];
     }
-
-    List<File> _getCurrentFiles() {
-      List<File> files;
-      switch (_selectedTabIndex) {
-        case 0:
-          files = [
-            ...videoMusicFiles,
-            ...mergedAudioFiles,
-            ...formatConverterAudioFiles
-          ];
-          // ✅ Safe sort for combined list
-          try {
-            files.sort((a, b) {
-              try {
-                return b.lastModifiedSync().compareTo(a.lastModifiedSync());
-              } catch (e) {
-                return 0;
-              }
-            });
-          } catch (e) {
-            // If sorting fails, use unsorted list
-          }
-          break;
-        case 1:
-          files = videoMusicFiles;
-          break;
-        case 2:
-          files = mergedAudioFiles;
-          break;
-        case 3:
-          files = formatConverterAudioFiles;
-          break;
-        case 4:
-          files = localMusicFiles;
-          break;
-        default:
-          files = [];
-      }
-      return files.where((f) => f.existsSync() && f.lengthSync() > 0).toList();
-    }
+    return files.where((f) => f.existsSync() && f.lengthSync() > 0).toList();
+  }
 
 
-
-    void _handleTabSelected(int index) {
+  void _handleTabSelected(int index) {
     if (index != _selectedTabIndex) {
       setState(() {
         _selectedTabIndex = index;
@@ -312,148 +431,167 @@ class _MergeAudioScreenState extends State<MergeAudioScreen> {
     final double keyboardHeight = mediaQuery.viewInsets.bottom;
     Color primaryColor = const Color(0xFF6C63FF);
 
-    return Scaffold(
-      backgroundColor: Colors.grey[100],
-      resizeToAvoidBottomInset: true,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back,
-            color: Colors.black,
-            size: responsive.w(24),
-          ),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        centerTitle: false,
-        title: Padding(
-          padding: EdgeInsets.only(
-              left: responsive.isTablet() ? responsive.w(16) : 0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Merge Audio',
-                style: TextStyle(
-                  color: Colors.black,
-                  fontSize: responsive.fs(18),
-                  fontWeight: FontWeight.w600,
-                  height: 1.2,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+    return WillPopScope(
+        onWillPop: () async {
+          if (controller.isMerging.value) {
+            final shouldExit = await _showExitConfirmationDialog();
+            return shouldExit ?? false;
+          }
+          return true;
+        },
+        child: Scaffold(
+          backgroundColor: Colors.grey[100],
+          resizeToAvoidBottomInset: true,
+          appBar: AppBar(
+            backgroundColor: Colors.white,
+            elevation: 0,
+            leading: IconButton(
+              icon: Icon(
+                Icons.arrow_back,
+                color: Colors.black,
+                size: responsive.w(24),
               ),
-              SizedBox(height: responsive.h(2)),
-              Text(
-                'Combine multiple files into one',
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: responsive.fs(13),
-                  fontWeight: FontWeight.w400,
-                  height: 1.2,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
-        toolbarHeight: responsive.h(70),
-      ),
-      body: Obx(() {
-        if (controller.isLoading.value || _isFetchingAllFiles) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        return Column(
-          children: [
-            _buildSelectedFilesSection(
-                scaleFactor, scaleFactorHeight, textScaleFactor),
-
-            Expanded(
-              child: CustomScrollView(
-                slivers: [
-                  SliverToBoxAdapter(
-                    child: buildGenericSearchBar(
-                      scaleFactor: scaleFactor,
-                      textScaleFactor: textScaleFactor,
-                      context: context,
-                      onSearchQueryChanged: (value) {
-                        setState(() => _searchQuery = value.toLowerCase());
-                      },
-                      hintText: 'Search audio files...',
+              onPressed: () async {
+                // ✅ Check if merging before allowing back navigation
+                if (controller.isMerging.value) {
+                  final shouldExit = await _showExitConfirmationDialog();
+                  if (shouldExit == true) {
+                    Navigator.of(context).pop();
+                  }
+                } else {
+                  Navigator.of(context).pop();
+                }
+              },
+            ),
+            centerTitle: false,
+            title: Padding(
+              padding: EdgeInsets.only(
+                  left: responsive.isTablet() ? responsive.w(16) : 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Merge Audio',
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: responsive.fs(18),
+                      fontWeight: FontWeight.w600,
+                      height: 1.2,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-
-                  SliverToBoxAdapter(
-                    child: buildGenericFilterTabs(
-                      scaleFactor: scaleFactor,
-                      scaleFactorHeight: scaleFactorHeight,
-                      textScaleFactor: textScaleFactor,
-                      context: context,
-                      selectedTabIndex: _selectedTabIndex,
-                      onTabSelected: _handleTabSelected,
-                      tabLabels: const [
-                        'All',
-                        'Extracted',
-                        'Merged',
-                        'Converted',
-                        'Local'
-                      ],
+                  SizedBox(height: responsive.h(2)),
+                  Text(
+                    'Combine multiple files into one',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: responsive.fs(13),
+                      fontWeight: FontWeight.w400,
+                      height: 1.2,
                     ),
-                  ),
-
-                  if (!(_selectedTabIndex == 4 &&
-                      !_localMusicPermissionGranted))
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: EdgeInsets.fromLTRB(
-                          responsive.w(16),
-                          responsive.h(4),
-                          responsive.w(16),
-                          responsive.h(12),
-                        ),
-                        child: Text(
-                          'Available Files',
-                          style: TextStyle(
-                            fontSize: responsive.fs(14),
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey[700],
-                          ),
-                        ),
-                      ),
-                    ),
-
-                  _buildAvailableFilesList(
-                      primaryColor, scaleFactor, scaleFactorHeight,
-                      textScaleFactor),
-
-                  SliverToBoxAdapter(
-                    child: SizedBox(
-                      height: selectedFiles.length >= 2
-                          ? (keyboardHeight > 0 ? keyboardHeight +
-                          80 * scaleFactorHeight : 80 * scaleFactorHeight)
-                          : (keyboardHeight > 0 ? keyboardHeight : 0),
-                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
             ),
+            toolbarHeight: responsive.h(70),
+          ),
+          body: Obx(() {
+            if (controller.isLoading.value || _isFetchingAllFiles) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-            if (keyboardHeight == 0)
-              if (isDraggingFromSelected)
-                _buildDeleteBin(scaleFactor, scaleFactorHeight, textScaleFactor)
-              else
-                if (selectedFiles.length >= 2)
-                  _buildMergeButton(
-                      primaryColor, scaleFactor, scaleFactorHeight,
-                      textScaleFactor),
-          ],
-        );
-      }),
-    );
+            return Column(
+              children: [
+                _buildSelectedFilesSection(
+                    scaleFactor, scaleFactorHeight, textScaleFactor),
+
+                Expanded(
+                  child: CustomScrollView(
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: buildGenericSearchBar(
+                          scaleFactor: scaleFactor,
+                          textScaleFactor: textScaleFactor,
+                          context: context,
+                          onSearchQueryChanged: (value) {
+                            setState(() => _searchQuery = value.toLowerCase());
+                          },
+                          hintText: 'Search audio files...',
+                        ),
+                      ),
+
+                      SliverToBoxAdapter(
+                        child: buildGenericFilterTabs(
+                          scaleFactor: scaleFactor,
+                          scaleFactorHeight: scaleFactorHeight,
+                          textScaleFactor: textScaleFactor,
+                          context: context,
+                          selectedTabIndex: _selectedTabIndex,
+                          onTabSelected: _handleTabSelected,
+                          tabLabels: const [
+                            'All',
+                            'Extracted',
+                            'Merged',
+                            'Converted',
+                            'Local'
+                          ],
+                        ),
+                      ),
+
+                      if (!(_selectedTabIndex == 4 &&
+                          !_localMusicPermissionGranted))
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: EdgeInsets.fromLTRB(
+                              responsive.w(16),
+                              responsive.h(4),
+                              responsive.w(16),
+                              responsive.h(12),
+                            ),
+                            child: Text(
+                              'Available Files',
+                              style: TextStyle(
+                                fontSize: responsive.fs(14),
+                                fontWeight: FontWeight.w600,
+                                color: Colors.grey[700],
+                              ),
+                            ),
+                          ),
+                        ),
+
+                      _buildAvailableFilesList(
+                          primaryColor, scaleFactor, scaleFactorHeight,
+                          textScaleFactor),
+
+                      SliverToBoxAdapter(
+                        child: SizedBox(
+                          height: selectedFiles.length >= 2
+                              ? (keyboardHeight > 0 ? keyboardHeight +
+                              80 * scaleFactorHeight : 80 * scaleFactorHeight)
+                              : (keyboardHeight > 0 ? keyboardHeight : 0),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                if (keyboardHeight == 0)
+                  if (isDraggingFromSelected)
+                    _buildDeleteBin(
+                        scaleFactor, scaleFactorHeight, textScaleFactor)
+                  else
+                    if (selectedFiles.length >= 2)
+                      _buildMergeButton(
+                          primaryColor, scaleFactor, scaleFactorHeight,
+                          textScaleFactor),
+              ],
+            );
+          }),
+        ));
   }
 
   Widget _buildAvailableFilesList(Color primaryColor, double scaleFactor,
@@ -1215,9 +1353,22 @@ class _MergeAudioScreenState extends State<MergeAudioScreen> {
 
     try {
       controller.isMerging.value = true;
+      controller.wasCancelled.value = false; // ✅ Reset at start
+
       final filePaths = filesToMerge.map((e) => e.path).toList();
       final mergedPath = await controller.mergeAudioFiles(filePaths, fileName);
 
+      // ✅ Check if merge was cancelled
+      if (controller.wasCancelled.value) {
+        print('Merge was cancelled by user');
+        toastFlutter(
+          toastmessage: 'Merge cancelled',
+          color: Colors.red,
+        );
+        return; // Exit without navigating
+      }
+
+      // ✅ Check if merge was successful
       if (mergedPath.isNotEmpty) {
         final musicDir = Directory('/storage/emulated/0/Music/MergedAudio');
         if (!await musicDir.exists()) {
@@ -1227,20 +1378,31 @@ class _MergeAudioScreenState extends State<MergeAudioScreen> {
         final newFile = await File(mergedPath).copy(newPath);
 
         controller.isMerging.value = false;
-        toastFlutter(toastmessage: 'Audio merged and saved to Music folder!',
-            color: Colors.green);
+        toastFlutter(
+          toastmessage: 'Audio merged and saved to Music folder!',
+          color: Colors.green,
+        );
 
+        // ✅ Navigate to AudioSavedScreen on success
         Get.off(() =>
             AudioSavedScreen(
-                fileName: fileName, audioPath: newFile.path, bitrate: ''));
+              fileName: fileName,
+              audioPath: newFile.path,
+              bitrate: '',
+            ));
       } else {
         controller.isMerging.value = false;
         toastFlutter(
-            toastmessage: 'Merging failed, try again.', color: Colors.red);
+          toastmessage: 'Merging failed, try again.',
+          color: Colors.red,
+        );
       }
     } catch (e) {
       controller.isMerging.value = false;
-      toastFlutter(toastmessage: 'An error occurred: $e', color: Colors.red);
+      toastFlutter(
+        toastmessage: 'An error occurred: $e',
+        color: Colors.red,
+      );
     }
   }
 }

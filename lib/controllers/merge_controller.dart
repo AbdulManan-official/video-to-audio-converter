@@ -1,4 +1,5 @@
 import 'dart:developer';
+import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_downloader/flutter_downloader.dart';
 import 'package:get/get.dart';
@@ -23,6 +24,20 @@ class MergeAudioController extends GetxController {
   Rx<DownloadTaskStatus> currentStatus = DownloadTaskStatus.undefined.obs;
   var downloadProgress = 0.0.obs; // Tracks progress percentage (0 to 100)
   var isMerging = false.obs;
+  var wasCancelled = false.obs; // ✅ Add this new flag
+
+  // In your MergeAudioController class
+  Future<void> cancelMerge() async {
+    wasCancelled.value = true; // ✅ Set cancellation flag
+    isMerging.value = false;
+
+    // If you're using FFmpeg, cancel the session
+    try {
+      await FFmpegKit.cancel(); // This cancels all active FFmpeg sessions
+    } catch (e) {
+      print('Error cancelling FFmpeg: $e');
+    }
+  }
 
   void updateSelection({
     required int index,
@@ -50,6 +65,12 @@ class MergeAudioController extends GetxController {
 
     // We start a loop from the second file (index 1)
     for (int i = 1; i < filePaths.length; i++) {
+      // ✅ Check if cancelled during merge
+      if (wasCancelled.value) {
+        print("[MergeAudio] Sequential merge cancelled at step $i");
+        return '';
+      }
+
       String fileToMerge = filePaths[i];
       // Generate a temporary name for the intermediate merge result
       String tempOutputName = 'temp_merge_step_$i.mp3';
@@ -67,6 +88,12 @@ class MergeAudioController extends GetxController {
 
       // If it was successful, the result becomes the base for the next step
       currentMergedPath = nextMergedPath;
+    }
+
+    // ✅ Check if cancelled before final rename
+    if (wasCancelled.value) {
+      print("[MergeAudio] Sequential merge cancelled before final rename");
+      return '';
     }
 
     // After the loop, the final temporary file (currentMergedPath) needs
@@ -105,11 +132,25 @@ class MergeAudioController extends GetxController {
 
     try {
       isMerging.value = true;
+      wasCancelled.value = false; // ✅ Reset cancellation flag at start
       print("[MergeAudio] Starting sequential merge of ${filePaths.length} files...");
 
       // Call the sequential merge logic
-      final mergedPath = await _sequentialMerge(
-          filePaths, outputFileName);
+      final mergedPath = await _sequentialMerge(filePaths, outputFileName);
+
+      // ✅ Check if cancelled during merge
+      if (wasCancelled.value) {
+        print("[MergeAudio] Merge was cancelled by user");
+        // Clean up any partial files
+        if (mergedPath.isNotEmpty && File(mergedPath).existsSync()) {
+          try {
+            await File(mergedPath).delete();
+          } catch (e) {
+            print("[MergeAudio] Error cleaning up: $e");
+          }
+        }
+        return '';
+      }
 
       // The sequential merge handles temporary file creation and renaming to the final file name
 
