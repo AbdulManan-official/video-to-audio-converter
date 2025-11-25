@@ -1072,15 +1072,7 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
           _selectedFileName = fileName;
         });
       },
-      onLongPress: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content:
-            Text(fileName, maxLines: 2, overflow: TextOverflow.ellipsis),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      },
+
       child: Container(
         margin: EdgeInsets.symmetric(horizontal: r.w(16), vertical: r.h(6)),
         padding: EdgeInsets.all(r.w(12)),
