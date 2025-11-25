@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
 import 'package:video_to_audio_converter/main.dart';
 import 'package:video_to_audio_converter/utils/utils.dart';
@@ -12,12 +13,17 @@ import 'dart:io';
 class ConversionProgressPage extends StatefulWidget {
   const ConversionProgressPage({super.key});
 
+
   @override
   State<ConversionProgressPage> createState() => _ConversionProgressPageState();
+
 }
 
 class _ConversionProgressPageState extends State<ConversionProgressPage> {
-  final FormateAudioController formateController = Get.find<FormateAudioController>();
+  final FormateAudioController formateController = Get.find<
+      FormateAudioController>();
+  bool isCancelDialogOpen = false;
+
   final MergeAudioController mergeController = Get.put(MergeAudioController());
 
   @override
@@ -27,6 +33,13 @@ class _ConversionProgressPageState extends State<ConversionProgressPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkForDuplicatesAndConvert();
     });
+    ever(formateController.isConverting, (bool converting) {
+      if (!converting && isCancelDialogOpen) {
+        Navigator.of(context, rootNavigator: true).pop(); // Auto close cancel dialog
+      }
+    });
+
+
   }
 
   // Check if any output files already exist
@@ -108,7 +121,9 @@ class _ConversionProgressPageState extends State<ConversionProgressPage> {
 
                   // Description
                   Text(
-                    "${duplicateFiles.length} ${duplicateFiles.length == 1 ? 'file' : 'files'} already exist. Choose an option:",
+                    "${duplicateFiles.length} ${duplicateFiles.length == 1
+                        ? 'file'
+                        : 'files'} already exist. Choose an option:",
                     style: TextStyle(
                       fontSize: r.fs(13),
                       color: Colors.grey[700],
@@ -214,12 +229,82 @@ class _ConversionProgressPageState extends State<ConversionProgressPage> {
                 ],
               ),
             ),
-            Icon(Icons.arrow_forward_ios, size: r.w(14), color: Colors.grey[400]),
+            Icon(Icons.arrow_forward_ios, size: r.w(14),
+                color: Colors.grey[400]),
           ],
         ),
       ),
     );
   }
+
+// Show cancel confirmation dialog
+  // Simple cancel confirmation dialog
+  Future<bool?> _showCancelDialog() async {
+    isCancelDialogOpen = true; // Mark dialog as open
+    final r = ResponsiveHelper(context);
+
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(r.w(16)),
+          ),
+          title: Text(
+            "Cancel Conversion?",
+            style: TextStyle(
+              fontSize: r.fs(18),
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: Text(
+            "Do you want to cancel the ongoing conversion? Progress will be lost.",
+            style: TextStyle(
+              fontSize: r.fs(14),
+              color: Colors.grey[700],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(
+                "Continue",
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: r.fs(14),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(r.w(8)),
+                ),
+                elevation: 0,
+              ),
+              child: Text(
+                "Cancel",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: r.fs(14),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    isCancelDialogOpen = false; // Mark dialog as closed
+    return result;
+  }
+
+
 
   // Utility function to format file size in bytes (KB, MB, etc.)
   String formatBytes(int bytes, int decimals) {
@@ -233,9 +318,13 @@ class _ConversionProgressPageState extends State<ConversionProgressPage> {
   }
 
   String getFormattedFileName(String filePath) {
-    final fileName = filePath.split('/').last;
+    final fileName = filePath
+        .split('/')
+        .last;
     final extension = formateController.selectedFormat.value.toLowerCase();
-    final baseName = fileName.split('.').first;
+    final baseName = fileName
+        .split('.')
+        .first;
     final newFileName = '${baseName}_converted.$extension';
 
     const maxLength = 18;
@@ -247,7 +336,9 @@ class _ConversionProgressPageState extends State<ConversionProgressPage> {
   }
 
   int getCompletedCount() {
-    return formateController.fileProgress.where((progress) => progress.value >= 1.0).length;
+    return formateController.fileProgress
+        .where((progress) => progress.value >= 1.0)
+        .length;
   }
 
   double getTotalProgress() {
@@ -266,405 +357,457 @@ class _ConversionProgressPageState extends State<ConversionProgressPage> {
   Widget build(BuildContext context) {
     final r = ResponsiveHelper(context);
 
-    return Scaffold(
-      backgroundColor: Colors.grey[100],
-      appBar: AppBar(
-        centerTitle: false,
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.black, size: r.w(24)),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Padding(
-          padding: EdgeInsets.only(left: r.isTablet() ? r.w(16) : r.w(4)),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                "Conversion Progress",
-                style: TextStyle(
-                  color: Colors.black,
-                  fontWeight: FontWeight.w600,
-                  fontSize: r.fs(18),
-                  height: 1.2,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              SizedBox(height: r.h(2)),
-              Obx(() {
-                int completed = getCompletedCount();
-                int total = formateController.selectedFiles.length;
-                return Text(
-                  formateController.isConverting.value
-                      ? "Converting files..."
-                      : "$completed of $total completed",
+    return WillPopScope(
+      onWillPop: () async {
+        if (formateController.isConverting.value) {
+          bool? shouldCancel = await _showCancelDialog();
+          if (shouldCancel == true) {
+            // Cancel conversion
+            formateController.cancelConversion();
+
+            // Get stats
+            final stats = formateController.getConversionStats();
+
+            Fluttertoast.showToast(
+              msg: "Conversion failed: ${stats['completed']} files converted, ${stats['pending']} files not converted",
+              toastLength: Toast.LENGTH_SHORT,
+              gravity: ToastGravity.BOTTOM,
+              backgroundColor: Colors.redAccent,
+              textColor: Colors.white,
+              fontSize: 16.0,
+            );
+
+
+            return true; // Allow back navigation
+          }
+          return false; // Stay on current screen
+        }
+        return true; // If conversion is complete, allow back navigation
+      },
+
+
+    child: Scaffold(
+        backgroundColor: Colors.grey[100],
+        appBar: AppBar(
+          centerTitle: false,
+          backgroundColor: Colors.white,
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back, color: Colors.black, size: r.w(24)),
+            onPressed: () async {
+              if (formateController.isConverting.value) {
+                bool? shouldCancel = await _showCancelDialog();
+                if (shouldCancel == true) {
+                  formateController.cancelConversion();
+                  Navigator.pop(context);
+                }
+              } else {
+                Navigator.pop(context);
+              }
+            },
+          ),
+          title: Padding(
+            padding: EdgeInsets.only(left: r.isTablet() ? r.w(16) : r.w(4)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  "Conversion Progress",
                   style: TextStyle(
-                    fontSize: r.fs(13),
-                    color: Colors.grey[600],
-                    fontWeight: FontWeight.w400,
+                    color: Colors.black,
+                    fontWeight: FontWeight.w600,
+                    fontSize: r.fs(18),
                     height: 1.2,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                );
-              }),
-            ],
-          ),
-        ),
-        toolbarHeight: r.h(70),
-        actions: [
-          Obx(() {
-            bool allDone = getCompletedCount() == formateController.selectedFiles.length;
-            return allDone
-                ? IconButton(
-              icon: Icon(Icons.home, color: Colors.black, size: r.w(24)),
-              onPressed: () {
-                Get.offAll(() => HomeScreen());
-              },
-            )
-                : const SizedBox.shrink();
-          }),
-        ],
-      ),
-      body: Obx(() {
-        return Column(
-          children: [
-            // Progress Summary Card
-            if (formateController.selectedFiles.isNotEmpty)
-              Obx(() {
-                final totalFiles = formateController.selectedFiles.length;
-                final completedFiles = getCompletedCount();
-                final progressValue = getTotalProgress();
-
-                return Container(
-                  margin: EdgeInsets.all(r.w(16)),
-                  padding: EdgeInsets.symmetric(
-                    horizontal: r.w(20),
-                    vertical: r.h(20),
-                  ),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF6C63FF), Color(0xFF6C63FF)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+                ),
+                SizedBox(height: r.h(2)),
+                Obx(() {
+                  int completed = getCompletedCount();
+                  int total = formateController.selectedFiles.length;
+                  return Text(
+                    formateController.isConverting.value
+                        ? "Converting files..."
+                        : "$completed of $total completed",
+                    style: TextStyle(
+                      fontSize: r.fs(13),
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w400,
+                      height: 1.2,
                     ),
-                    borderRadius: BorderRadius.circular(r.w(16)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF6C63FF).withOpacity(0.2),
-                        blurRadius: r.w(12),
-                        offset: Offset(0, r.h(4)),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  );
+                }),
+              ],
+            ),
+          ),
+          toolbarHeight: r.h(70),
+          actions: [
+            Obx(() {
+              bool allDone = getCompletedCount() ==
+                  formateController.selectedFiles.length;
+              return allDone
+                  ? IconButton(
+                icon: Icon(Icons.home, color: Colors.black, size: r.w(24)),
+                onPressed: () {
+                  Get.offAll(() => HomeScreen());
+                },
+              )
+                  : const SizedBox.shrink();
+            }),
+          ],
+        ),
+        body: Obx(() {
+          return Column(
+            children: [
+              // Progress Summary Card
+              if (formateController.selectedFiles.isNotEmpty)
+                Obx(() {
+                  final totalFiles = formateController.selectedFiles.length;
+                  final completedFiles = getCompletedCount();
+                  final progressValue = getTotalProgress();
+
+                  return Container(
+                    margin: EdgeInsets.all(r.w(16)),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: r.w(20),
+                      vertical: r.h(20),
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF6C63FF), Color(0xFF6C63FF)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              "Overall Conversion Status",
+                      borderRadius: BorderRadius.circular(r.w(16)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF6C63FF).withOpacity(0.2),
+                          blurRadius: r.w(12),
+                          offset: Offset(0, r.h(4)),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                "Overall Conversion Status",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: r.fs(15),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            SizedBox(width: r.w(8)),
+                            Text(
+                              "${(progressValue * 100).toStringAsFixed(0)}%",
                               style: TextStyle(
                                 color: Colors.white,
-                                fontSize: r.fs(15),
-                                fontWeight: FontWeight.w600,
+                                fontSize: r.fs(20),
+                                fontWeight: FontWeight.bold,
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                             ),
+                          ],
+                        ),
+                        SizedBox(height: r.h(12)),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(r.w(8)),
+                          child: LinearProgressIndicator(
+                            value: progressValue,
+                            backgroundColor: Colors.white.withOpacity(0.3),
+                            valueColor: const AlwaysStoppedAnimation<Color>(
+                                Colors.white),
+                            minHeight: r.h(12),
                           ),
-                          SizedBox(width: r.w(8)),
-                          Text(
-                            "${(progressValue * 100).toStringAsFixed(0)}%",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: r.fs(20),
-                              fontWeight: FontWeight.bold,
+                        ),
+                        SizedBox(height: r.h(20)),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "Completed",
+                                    style: TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: r.fs(12),
+                                    ),
+                                  ),
+                                  SizedBox(height: r.h(2)),
+                                  Text(
+                                    "$completedFiles",
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: r.fs(24),
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    "Total Files",
+                                    style: TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: r.fs(12),
+                                    ),
+                                  ),
+                                  SizedBox(height: r.h(2)),
+                                  Text(
+                                    "$totalFiles",
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: r.fs(24),
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    "Format",
+                                    style: TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: r.fs(12),
+                                    ),
+                                  ),
+                                  SizedBox(height: r.h(2)),
+                                  Text(
+                                    formateController.selectedFormat.value,
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: r.fs(24),
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+
+              // Files List
+              Expanded(
+                child: ListView.builder(
+                  padding: EdgeInsets.symmetric(horizontal: r.w(16)),
+                  itemCount: formateController.selectedFiles.length,
+                  itemBuilder: (context, index) {
+                    final fileName = getFormattedFileName(
+                        formateController.selectedFiles[index]);
+                    final progress = formateController.fileProgress[index];
+                    final isCompleted = progress.value >= 1.0;
+
+                    return Container(
+                      margin: EdgeInsets.only(bottom: r.h(12)),
+                      padding: EdgeInsets.all(r.w(16)),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(r.w(16)),
+                        border: Border.all(
+                          color: isCompleted
+                              ? Colors.black.withOpacity(0.2)
+                              : Colors.grey[200]!,
+                          width: r.w(1),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.03),
+                            blurRadius: r.w(8),
+                            offset: Offset(0, r.h(2)),
                           ),
                         ],
                       ),
-                      SizedBox(height: r.h(12)),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(r.w(8)),
-                        child: LinearProgressIndicator(
-                          value: progressValue,
-                          backgroundColor: Colors.white.withOpacity(0.3),
-                          valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
-                          minHeight: r.h(12),
-                        ),
-                      ),
-                      SizedBox(height: r.h(20)),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      child: Row(
                         children: [
+                          Container(
+                            width: r.w(50),
+                            height: r.w(50),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF6C63FF),
+                              borderRadius: BorderRadius.circular(r.w(12)),
+                            ),
+                            child: isCompleted
+                                ? Icon(
+                              Icons.audio_file,
+                              color: Colors.white,
+                              size: r.w(32),
+                            )
+                                : Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                Icon(
+                                  Icons.audio_file,
+                                  color: Colors.white,
+                                  size: r.w(28),
+                                ),
+                                if (progress.value > 0 && progress.value < 1.0)
+                                  SizedBox(
+                                    width: r.w(56),
+                                    height: r.w(56),
+                                    child: CircularProgressIndicator(
+                                      value: progress.value,
+                                      strokeWidth: r.w(3),
+                                      backgroundColor: Colors.transparent,
+                                      valueColor: const AlwaysStoppedAnimation<
+                                          Color>(
+                                        Color(0xFF6C63FF),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          SizedBox(width: r.w(16)),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  "Completed",
-                                  style: TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: r.fs(12),
-                                  ),
-                                ),
-                                SizedBox(height: r.h(2)),
-                                Text(
-                                  "$completedFiles",
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: r.fs(24),
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Text(
-                                  "Total Files",
-                                  style: TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: r.fs(12),
-                                  ),
-                                ),
-                                SizedBox(height: r.h(2)),
-                                Text(
-                                  "$totalFiles",
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: r.fs(24),
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  "Format",
-                                  style: TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: r.fs(12),
-                                  ),
-                                ),
-                                SizedBox(height: r.h(2)),
-                                Text(
-                                  formateController.selectedFormat.value,
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: r.fs(24),
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                  fileName,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                );
-              }),
-
-            // Files List
-            Expanded(
-              child: ListView.builder(
-                padding: EdgeInsets.symmetric(horizontal: r.w(16)),
-                itemCount: formateController.selectedFiles.length,
-                itemBuilder: (context, index) {
-                  final fileName = getFormattedFileName(formateController.selectedFiles[index]);
-                  final progress = formateController.fileProgress[index];
-                  final isCompleted = progress.value >= 1.0;
-
-                  return Container(
-                    margin: EdgeInsets.only(bottom: r.h(12)),
-                    padding: EdgeInsets.all(r.w(16)),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(r.w(16)),
-                      border: Border.all(
-                        color: isCompleted ? Colors.black.withOpacity(0.2) : Colors.grey[200]!,
-                        width: r.w(1),
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.03),
-                          blurRadius: r.w(8),
-                          offset: Offset(0, r.h(2)),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: r.w(50),
-                          height: r.w(50),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF6C63FF),
-                            borderRadius: BorderRadius.circular(r.w(12)),
-                          ),
-                          child: isCompleted
-                              ? Icon(
-                            Icons.audio_file,
-                            color: Colors.white,
-                            size: r.w(32),
-                          )
-                              : Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              Icon(
-                                Icons.audio_file,
-                                color: Colors.white,
-                                size: r.w(28),
-                              ),
-                              if (progress.value > 0 && progress.value < 1.0)
-                                SizedBox(
-                                  width: r.w(56),
-                                  height: r.w(56),
-                                  child: CircularProgressIndicator(
-                                    value: progress.value,
-                                    strokeWidth: r.w(3),
-                                    backgroundColor: Colors.transparent,
-                                    valueColor: const AlwaysStoppedAnimation<Color>(
-                                      Color(0xFF6C63FF),
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                        SizedBox(width: r.w(16)),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                fileName,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: r.fs(14),
-                                  color: isCompleted ? Colors.black : Colors.black,
-                                ),
-                              ),
-                              SizedBox(height: r.h(8)),
-                              if (isCompleted) ...[
-                                Text(
-                                  'Size: ${formatBytes(1500000, 2)}',
                                   style: TextStyle(
-                                    fontSize: r.fs(12),
-                                    color: Colors.grey[600],
-                                    fontWeight: FontWeight.w500,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: r.fs(14),
+                                    color: isCompleted ? Colors.black : Colors
+                                        .black,
                                   ),
                                 ),
-                                SizedBox(height: r.h(4)),
-                                Text(
-                                  "Conversion complete",
-                                  style: TextStyle(
-                                    fontSize: r.fs(12),
-                                    color: Colors.grey[600],
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ] else ...[
-                                Obx(() {
-                                  return ClipRRect(
-                                    borderRadius: BorderRadius.circular(r.w(8)),
-                                    child: LinearProgressIndicator(
-                                      value: progress.value,
-                                      backgroundColor: Colors.grey[200],
-                                      valueColor: const AlwaysStoppedAnimation<Color>(
-                                        Color(0xFF6C63FF),
-                                      ),
-                                      minHeight: r.h(6),
-                                    ),
-                                  );
-                                }),
-                                SizedBox(height: r.h(6)),
-                                Obx(() {
-                                  return Text(
-                                    '${(progress.value * 100).toStringAsFixed(0)}%',
+                                SizedBox(height: r.h(8)),
+                                if (isCompleted) ...[
+                                  Text(
+                                    'Size: ${formatBytes(1500000, 2)}',
                                     style: TextStyle(
                                       fontSize: r.fs(12),
                                       color: Colors.grey[600],
                                       fontWeight: FontWeight.w500,
                                     ),
-                                  );
-                                }),
-                              ]
-                            ],
+                                  ),
+                                  SizedBox(height: r.h(4)),
+                                  Text(
+                                    "Conversion complete",
+                                    style: TextStyle(
+                                      fontSize: r.fs(12),
+                                      color: Colors.grey[600],
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ] else
+                                  ...[
+                                    Obx(() {
+                                      return ClipRRect(
+                                        borderRadius: BorderRadius.circular(
+                                            r.w(8)),
+                                        child: LinearProgressIndicator(
+                                          value: progress.value,
+                                          backgroundColor: Colors.grey[200],
+                                          valueColor: const AlwaysStoppedAnimation<
+                                              Color>(
+                                            Color(0xFF6C63FF),
+                                          ),
+                                          minHeight: r.h(6),
+                                        ),
+                                      );
+                                    }),
+                                    SizedBox(height: r.h(6)),
+                                    Obx(() {
+                                      return Text(
+                                        '${(progress.value * 100)
+                                            .toStringAsFixed(0)}%',
+                                        style: TextStyle(
+                                          fontSize: r.fs(12),
+                                          color: Colors.grey[600],
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      );
+                                    }),
+                                  ]
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+
+              // Success Button
+              if (!formateController.isConverting.value)
+                Container(
+                  padding: EdgeInsets.all(r.w(16)),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: r.w(10),
+                        offset: Offset(0, -r.h(2)),
+                      ),
+                    ],
+                  ),
+                  child: SafeArea(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            Get.to(() => const OutputScreen());
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF6C63FF),
+                            minimumSize: Size(double.infinity, r.h(54)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(r.w(12)),
+                            ),
+                            elevation: 0,
+                          ),
+                          icon: Icon(Icons.folder_open, color: Colors.white,
+                              size: r.w(22)),
+                          label: Text(
+                            'Go To Folder',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: r.fs(16),
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ],
                     ),
-                  );
-                },
-              ),
-            ),
-
-            // Success Button
-            if (!formateController.isConverting.value)
-              Container(
-                padding: EdgeInsets.all(r.w(16)),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: r.w(10),
-                      offset: Offset(0, -r.h(2)),
-                    ),
-                  ],
-                ),
-                child: SafeArea(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      ElevatedButton.icon(
-                        onPressed: () {
-                          Get.to(() => const OutputScreen());
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF6C63FF),
-                          minimumSize: Size(double.infinity, r.h(54)),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(r.w(12)),
-                          ),
-                          elevation: 0,
-                        ),
-                        icon: Icon(Icons.folder_open, color: Colors.white, size: r.w(22)),
-                        label: Text(
-                          'Go To Folder',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: r.fs(16),
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
                   ),
                 ),
-              ),
-          ],
-        );
-      }),
+            ],
+          );
+        }),
+      ),
     );
   }
 }

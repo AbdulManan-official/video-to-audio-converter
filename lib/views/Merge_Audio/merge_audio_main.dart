@@ -154,15 +154,6 @@ class _MergeAudioScreenState extends State<MergeAudioScreen> {
                   ),
                   SizedBox(height: 12 * scaleFactor),
                   Text(
-                    'If you exit now, the merge will be cancelled and your progress will be lost.',
-                    style: TextStyle(
-                      fontSize: 14 * scaleFactor * textScaleFactor,
-                      color: Colors.red[700],
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  SizedBox(height: 12 * scaleFactor),
-                  Text(
                     'Do you want to cancel the merge and exit?',
                     style: TextStyle(
                       fontSize: 14 * scaleFactor * textScaleFactor,
@@ -182,7 +173,7 @@ class _MergeAudioScreenState extends State<MergeAudioScreen> {
                   ),
                 ),
                 child: Text(
-                  'CONTINUE MERGING',
+                  'CONTINUE',
                   style: TextStyle(
                     fontSize: 14 * scaleFactor * textScaleFactor,
                     fontWeight: FontWeight.w600,
@@ -208,7 +199,7 @@ class _MergeAudioScreenState extends State<MergeAudioScreen> {
                   Navigator.of(context).pop(true); // Allow exit
                 },
                 child: Text(
-                  'CANCEL & EXIT',
+                  'CANCEL',
                   style: TextStyle(
                     fontSize: 14 * scaleFactor * textScaleFactor,
                     fontWeight: FontWeight.w600,
@@ -397,21 +388,33 @@ class _MergeAudioScreenState extends State<MergeAudioScreen> {
       selectedFilePaths.clear();
     });
   }
-
   String shortenFileName(String name, {int max = 20}) {
-    if (name.length <= max) return name;
+    if (name.isEmpty) return "";
 
     final dotIndex = name.lastIndexOf('.');
     final baseName = dotIndex != -1 ? name.substring(0, dotIndex) : name;
-    final extension = dotIndex != -1 ? name.substring(dotIndex) : '';
+    final extension = dotIndex != -1 ? name.substring(dotIndex) : "";
 
-    if (extension.length >= max) return '...$extension';
+    // If full name fits, return full name
+    if (name.length <= max) return name;
 
-    final allowedBaseLength = max - 3;
-    if (allowedBaseLength <= 0) return '...';
+    // Reserve space for "..." and extension
+    final allowedBase = max - extension.length - 3; // 3 for "..."
 
-    return '${baseName.substring(0, allowedBaseLength)}...';
+    if (allowedBase <= 0) {
+      // Not enough space → just show "..." + extension
+      return "...$extension";
+    }
+
+    final shortenedBase = baseName.length > allowedBase
+        ? baseName.substring(0, allowedBase)
+        : baseName;
+
+    return "$shortenedBase...$extension";
   }
+
+
+
 
   @override
   void dispose() {
@@ -858,19 +861,18 @@ class _MergeAudioScreenState extends State<MergeAudioScreen> {
           children: [
             Icon(isDragging ? Icons.arrow_downward_rounded : Icons
                 .queue_music_outlined, size: 36 * scaleFactor,
-                color: isDragging ? Colors.purple : Colors.grey[400]),
+                color: isDragging ? Colors.purple : Colors.grey[500]),
             SizedBox(height: 6 * scaleFactorHeight),
             Text(isDragging ? 'Drop file here' : 'No files selected',
                 style: TextStyle(fontSize: 13 * scaleFactor * textScaleFactor,
                     fontWeight: FontWeight.w500,
-                    color: isDragging ? Colors.purple : Colors.grey[700])),
+                    color: isDragging ? Colors.purple : Colors.black54)),
             SizedBox(height: 3 * scaleFactorHeight),
             Text(isDragging
                 ? 'Release to add file'
                 : 'Hold to drag/Add files from the list below',
                 style: TextStyle(fontSize: 11 * scaleFactor * textScaleFactor,
-                    color: isDragging ? Colors.purple.shade300 : Colors
-                        .grey[500])),
+                    color: isDragging ? Colors.purple.shade300 : Colors.black54)),
           ],
         ),
       ),
