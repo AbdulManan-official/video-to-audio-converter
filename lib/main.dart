@@ -222,6 +222,19 @@ class _OutputScreenState extends State<OutputScreen> {
           .map((item) => File(item.path))
           .toList();
 
+      // ✅ Sort by modification time (newest first)
+      try {
+        files.sort((a, b) {
+          try {
+            return b.lastModifiedSync().compareTo(a.lastModifiedSync());
+          } catch (e) {
+            return 0;
+          }
+        });
+      } catch (e) {
+        log('OutputScreen: Sorting failed for $directoryPath: $e');
+      }
+
       setState(() {
         targetList.addAll(files);
       });
@@ -315,17 +328,33 @@ class _OutputScreenState extends State<OutputScreen> {
   }
 
   List<File> _getCurrentFiles() {
-    if (_selectedTabIndex == 0) {
-      return _getAllFiles();
-    } else if (_selectedTabIndex == 1) {
-      return videoMusicFiles;
-    } else if (_selectedTabIndex == 2) {
-      return mergedAudioFiles;
-    } else {
-      return formatConverterAudioFiles;
-    }
-  }
+    List<File> files;
 
+    if (_selectedTabIndex == 0) {
+      files = _getAllFiles();
+
+      // ✅ Re-sort combined list (newest first)
+      try {
+        files.sort((a, b) {
+          try {
+            return b.lastModifiedSync().compareTo(a.lastModifiedSync());
+          } catch (e) {
+            return 0;
+          }
+        });
+      } catch (e) {
+        log('OutputScreen: Sorting failed for combined files: $e');
+      }
+    } else if (_selectedTabIndex == 1) {
+      files = videoMusicFiles;
+    } else if (_selectedTabIndex == 2) {
+      files = mergedAudioFiles;
+    } else {
+      files = formatConverterAudioFiles;
+    }
+
+    return files;
+  }
   Directory? _getCurrentDirectory() {
     if (_selectedTabIndex == 1) {
       return Directory('/storage/emulated/0/Music/VideoMusic');

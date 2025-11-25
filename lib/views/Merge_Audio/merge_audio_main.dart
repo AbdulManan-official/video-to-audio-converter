@@ -90,12 +90,15 @@ class _MergeAudioScreenState extends State<MergeAudioScreen> {
           .listSync()
           .where((item) => !item.path.contains(".pending-"))
           .map((item) => File(item.path))
-          .where((file) => file.existsSync() && file.lengthSync() > 0) // ✅ filter out empty files
+          .where((file) => file.existsSync() && file.lengthSync() > 0)
           .toList();
+
+      // ✅ Sort by modification time (newest first)
+      files.sort((a, b) => b.lastModifiedSync().compareTo(a.lastModifiedSync()));
+
       targetList.addAll(files);
     }
   }
-
 
   Future<void> _fetchLocalAudioFiles(
       {bool forcePermissionCheck = false}) async {
@@ -155,10 +158,10 @@ class _MergeAudioScreenState extends State<MergeAudioScreen> {
                 path.endsWith('.wav') || path.endsWith('.aac') ||
                 path.endsWith('.flac') || path.endsWith('.ogg')) &&
                 !appDirs.any((appDir) => path.contains(appDir)) &&
-                entity.existsSync() && entity.lengthSync() > 0) { // <-- filter here
+                entity.existsSync() &&
+                entity.lengthSync() > 0) { // <-- filter here
               files.add(entity);
             }
-
           }
         }
       }
@@ -166,46 +169,75 @@ class _MergeAudioScreenState extends State<MergeAudioScreen> {
 
     if (mounted) {
       setState(() {
+        // ✅ Safe sort - only sort files that still exist
+        try {
+          files.sort((a, b) {
+            try {
+              return b.lastModifiedSync().compareTo(a.lastModifiedSync());
+            } catch (e) {
+              return 0; // If comparison fails, keep original order
+            }
+          });
+        } catch (e) {
+          // If sorting fails entirely, just use unsorted list
+        }
         localMusicFiles = files;
         _isFetchingLocalFiles = false;
       });
     }
   }
 
-  List<File> _getAllFiles() {
-    return [
-      ...videoMusicFiles,
-      ...mergedAudioFiles,
-      ...formatConverterAudioFiles
-    ];
-  }
-
-  List<File> _getCurrentFiles() {
-    List<File> files;
-    switch (_selectedTabIndex) {
-      case 0:
-        files = [...videoMusicFiles, ...mergedAudioFiles, ...formatConverterAudioFiles];
-        break;
-      case 1:
-        files = videoMusicFiles;
-        break;
-      case 2:
-        files = mergedAudioFiles;
-        break;
-      case 3:
-        files = formatConverterAudioFiles;
-        break;
-      case 4:
-        files = localMusicFiles;
-        break;
-      default:
-        files = [];
+    List<File> _getAllFiles() {
+      return [
+        ...videoMusicFiles,
+        ...mergedAudioFiles,
+        ...formatConverterAudioFiles
+      ];
     }
-    return files.where((f) => f.existsSync() && f.lengthSync() > 0).toList(); // <-- filter empty
-  }
+
+    List<File> _getCurrentFiles() {
+      List<File> files;
+      switch (_selectedTabIndex) {
+        case 0:
+          files = [
+            ...videoMusicFiles,
+            ...mergedAudioFiles,
+            ...formatConverterAudioFiles
+          ];
+          // ✅ Safe sort for combined list
+          try {
+            files.sort((a, b) {
+              try {
+                return b.lastModifiedSync().compareTo(a.lastModifiedSync());
+              } catch (e) {
+                return 0;
+              }
+            });
+          } catch (e) {
+            // If sorting fails, use unsorted list
+          }
+          break;
+        case 1:
+          files = videoMusicFiles;
+          break;
+        case 2:
+          files = mergedAudioFiles;
+          break;
+        case 3:
+          files = formatConverterAudioFiles;
+          break;
+        case 4:
+          files = localMusicFiles;
+          break;
+        default:
+          files = [];
+      }
+      return files.where((f) => f.existsSync() && f.lengthSync() > 0).toList();
+    }
 
 
-  void _handleTabSelected(int index) {
+
+    void _handleTabSelected(int index) {
     if (index != _selectedTabIndex) {
       setState(() {
         _selectedTabIndex = index;

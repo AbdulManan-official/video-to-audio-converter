@@ -309,15 +309,16 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
           .where((item) => !item.path.contains(".pending-"))
           .map((item) => File(item.path))
           .toList();
+
+// ✅ Sort by modification time (newest first)
+      files.sort((a, b) => b.lastModifiedSync().compareTo(a.lastModifiedSync()));
       targetList.addAll(files);
     }
   }
 
   // COMPLETELY REWRITTEN: Simplified local file fetching
   Future<void> _fetchLocalAudioFiles({bool forcePermissionCheck = false}) async {
-    log('═══════════════════════════════════════════════════');
     log('[LOCAL FETCH] STARTING LOCAL FILE SCAN');
-    log('═══════════════════════════════════════════════════');
 
     setState(() {
       _isFetchingLocalFiles = true;
@@ -404,6 +405,20 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
       log('[LOCAL FETCH] SCAN COMPLETE');
       log('[LOCAL FETCH] Total audio files found: $totalFilesFound');
       log('[LOCAL FETCH] ───────────────────────────────────────');
+
+      // Update state with found files
+      try {
+        allFoundFiles.sort((a, b) {
+          try {
+            return b.lastModifiedSync().compareTo(a.lastModifiedSync());
+          } catch (e) {
+            return 0;
+          }
+        });
+        log('[LOCAL FETCH] Files sorted by modification time');
+      } catch (e) {
+        log('[LOCAL FETCH] Sorting failed: $e');
+      }
 
       // Update state with found files
       setState(() {
@@ -775,6 +790,21 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
           ...mergedAudiosFiles,
           ...convertedAudiosFiles
         ];
+
+        // ✅ Re-sort combined list since it merges multiple sources
+        // ✅ Re-sort combined list since it merges multiple sources
+        try {
+          sourceList.sort((a, b) {
+            try {
+              return b.lastModifiedSync().compareTo(a.lastModifiedSync());
+            } catch (e) {
+              return 0;
+            }
+          });
+        } catch (e) {
+          // If sorting fails, use unsorted list
+        }
+
         sizeMap = appAudiosFileSizes;
         durationMap = appAudiosFileDurations;
         break;
@@ -783,6 +813,7 @@ class _SetRingtonePageState extends State<SetRingtonePage> {
         sizeMap = appAudiosFileSizes;
         durationMap = appAudiosFileDurations;
         break;
+
       case 2:
         sourceList = mergedAudiosFiles;
         sizeMap = appAudiosFileSizes;

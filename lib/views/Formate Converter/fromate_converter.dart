@@ -81,6 +81,10 @@ class _FormateMainState extends State<FormateMain> {
           .where((item) => !item.path.contains(".pending-"))
           .map((item) => File(item.path))
           .toList();
+
+      // ✅ Sort by modification time (newest first)
+      files.sort((a, b) => b.lastModifiedSync().compareTo(a.lastModifiedSync()));
+
       targetList.addAll(files);
     }
   }
@@ -154,6 +158,19 @@ class _FormateMainState extends State<FormateMain> {
 
     if (mounted) {
       setState(() {
+        // ✅ Sort files by modification time (newest first) BEFORE setting state
+        try {
+          files.sort((a, b) {
+            try {
+              return b.lastModifiedSync().compareTo(a.lastModifiedSync());
+            } catch (e) {
+              return 0;
+            }
+          });
+        } catch (e) {
+          // If sorting fails, use unsorted list
+        }
+
         localMusicFiles = files;
         _isFetchingLocalFiles = false;
       });
@@ -172,14 +189,42 @@ class _FormateMainState extends State<FormateMain> {
 
   List<File> _getCurrentFiles({int? index}) {
     final targetIndex = index ?? _selectedTabIndex;
+    List<File> files;
+
     switch (targetIndex) {
-      case 0: return [...videoMusicFiles, ...mergedAudioFiles, ...formatConverterAudioFiles];
-      case 1: return videoMusicFiles;
-      case 2: return mergedAudioFiles;
-      case 3: return formatConverterAudioFiles;
-      case 4: return localMusicFiles;
-      default: return [];
+      case 0:
+        files = [...videoMusicFiles, ...mergedAudioFiles, ...formatConverterAudioFiles];
+
+        // ✅ Re-sort combined list (newest first)
+        try {
+          files.sort((a, b) {
+            try {
+              return b.lastModifiedSync().compareTo(a.lastModifiedSync());
+            } catch (e) {
+              return 0;
+            }
+          });
+        } catch (e) {
+          // If sorting fails, use unsorted list
+        }
+        break;
+      case 1:
+        files = videoMusicFiles;
+        break;
+      case 2:
+        files = mergedAudioFiles;
+        break;
+      case 3:
+        files = formatConverterAudioFiles;
+        break;
+      case 4:
+        files = localMusicFiles;
+        break;
+      default:
+        files = [];
     }
+
+    return files;
   }
 
   void _handleTabSelected(int index) {
