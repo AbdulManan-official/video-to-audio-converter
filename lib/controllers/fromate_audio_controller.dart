@@ -29,6 +29,7 @@ class FormateAudioController extends GetxController {
 
   var selectedFiles = <String>[].obs;
   var fileProgress = <RxDouble>[].obs;
+  var outputFileNames = <String>[].obs;
 
   var shouldReplaceExisting = true.obs;
 
@@ -36,6 +37,7 @@ class FormateAudioController extends GetxController {
     if (!selectedFiles.contains(filePath)) {
       selectedFiles.add(filePath);
       fileProgress.add(0.0.obs);
+      outputFileNames.add('');
     }
   }
 
@@ -44,12 +46,14 @@ class FormateAudioController extends GetxController {
     if (index != -1) {
       selectedFiles.removeAt(index);
       fileProgress.removeAt(index);
+      outputFileNames.removeAt(index);
     }
   }
 
   void clearSelectedFiles() {
     selectedFiles.clear();
     fileProgress.clear();
+    outputFileNames.clear();
   }
 
   Future<List<String>> checkForDuplicates() async {
@@ -58,7 +62,7 @@ class FormateAudioController extends GetxController {
 
     for (String filePath in selectedFiles) {
       String outputPath =
-          "${musicDir.path}/${filePath.split('/').last.split('.').first}_converted.${selectedFormat.value.toLowerCase()}";
+          "${musicDir.path}/${filePath.split('/').last.split('.').first}.${selectedFormat.value.toLowerCase()}";
 
       if (await File(outputPath).exists()) {
         duplicateFiles.add(outputPath.split('/').last);
@@ -81,17 +85,12 @@ class FormateAudioController extends GetxController {
     String directory = file.parent.path;
     String fullFileName = file.path.split('/').last;
     String extension = fullFileName.split('.').last;
-    String baseNameWithSuffix = fullFileName.substring(0, fullFileName.length - extension.length - 1);
-
-    String baseName = baseNameWithSuffix;
-    if (baseName.endsWith('_converted')) {
-      baseName = baseName.substring(0, baseName.length - 10);
-    }
+    String baseNameWithoutExt = fullFileName.substring(0, fullFileName.length - extension.length - 1);
 
     int counter = 1;
     String newPath;
     do {
-      newPath = '$directory/${baseName}_converted ($counter).$extension';
+      newPath = '$directory/$baseNameWithoutExt ($counter).$extension';
       counter++;
     } while (File(newPath).existsSync());
 
@@ -139,8 +138,11 @@ class FormateAudioController extends GetxController {
         }
 
         String outputPath =
-            "${musicDir.path}/${filePath.split('/').last.split('.').first}_converted.${selectedFormat.value.toLowerCase()}";
+            "${musicDir.path}/${filePath.split('/').last.split('.').first}.${selectedFormat.value.toLowerCase()}";
         outputPath = _getUniqueOutputPath(outputPath);
+
+        // ✅ NEW: Store the actual output file name (with (1) if renamed)
+        outputFileNames[i] = outputPath.split('/').last;
 
         progress.value = 0.0;
 
@@ -201,9 +203,11 @@ class FormateAudioController extends GetxController {
   void reset() {
     selectedFiles.clear();
     fileProgress.clear();
+    outputFileNames.clear();
     selectedFormat.value = '';
     isConverting.value = false;
     shouldReplaceExisting.value = true;
     isCancelled.value = false;
+
   }
 }

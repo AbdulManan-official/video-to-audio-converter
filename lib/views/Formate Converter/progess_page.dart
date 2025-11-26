@@ -317,15 +317,24 @@ class _ConversionProgressPageState extends State<ConversionProgressPage> {
     return '${(bytes / pow(1024, i)).toStringAsFixed(decimals)} ${suffixes[i]}';
   }
 
-  String getFormattedFileName(String filePath) {
-    final fileName = filePath
-        .split('/')
-        .last;
+  String getFormattedFileName(String filePath, int index) { // ✅ Added index parameter
+    // ✅ Use actual output file name if available (includes (1), (2) etc.)
+    if (index < formateController.outputFileNames.length &&
+        formateController.outputFileNames[index].isNotEmpty) {
+      final outputFileName = formateController.outputFileNames[index];
+
+      const maxLength = 18;
+      if (outputFileName.length > maxLength) {
+        return '${outputFileName.substring(0, maxLength)}...';
+      }
+      return outputFileName;
+    }
+
+    // ✅ Fallback to original logic (for before conversion starts)
+    final fileName = filePath.split('/').last;
     final extension = formateController.selectedFormat.value.toLowerCase();
-    final baseName = fileName
-        .split('.')
-        .first;
-    final newFileName = '${baseName}_converted.$extension';
+    final baseName = fileName.split('.').first;
+    final newFileName = '$baseName.$extension';
 
     const maxLength = 18;
 
@@ -620,7 +629,8 @@ class _ConversionProgressPageState extends State<ConversionProgressPage> {
                   itemCount: formateController.selectedFiles.length,
                   itemBuilder: (context, index) {
                     final fileName = getFormattedFileName(
-                        formateController.selectedFiles[index]);
+                        formateController.selectedFiles[index],
+                        index); // ✅ Pass index
                     final progress = formateController.fileProgress[index];
                     final isCompleted = progress.value >= 1.0;
 
