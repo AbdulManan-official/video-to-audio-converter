@@ -424,6 +424,7 @@ class _OutputScreenState extends State<OutputScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16 * scaleFactor),
         ),
@@ -549,9 +550,18 @@ class _OutputScreenState extends State<OutputScreen> {
     final double scaleFactor = mediaQuery.size.width / referenceWidth;
     final double textScaleFactor = mediaQuery.textScaleFactor;
 
+    // ✅ Select all text automatically after dialog opens
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _controller.selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: _controller.text.length,
+      );
+    });
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: Colors.white, // ✅ White dialog box background
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16 * scaleFactor),
         ),
@@ -567,6 +577,7 @@ class _OutputScreenState extends State<OutputScreen> {
           width: MediaQuery.of(context).size.width * 0.8,
           child: TextField(
             controller: _controller,
+            autofocus: true,
             style: TextStyle(fontSize: 16 * scaleFactor * textScaleFactor),
             decoration: InputDecoration(
               hintText: 'Enter new file name',
@@ -775,6 +786,7 @@ class _OutputScreenState extends State<OutputScreen> {
         rightPosition > menuWidth ? rightPosition : position.dx,
         position.dy,
       ),
+      color: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12 * scaleFactor)),
       constraints: BoxConstraints(
         minWidth: 160 * scaleFactor,
@@ -854,6 +866,7 @@ class _OutputScreenState extends State<OutputScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16 * scaleFactor),
         ),

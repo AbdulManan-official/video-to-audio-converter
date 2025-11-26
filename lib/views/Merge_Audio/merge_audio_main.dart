@@ -1275,10 +1275,19 @@ class _MergeAudioScreenState extends State<MergeAudioScreen> {
     final double scaleFactor = mediaQuery.size.width / referenceWidth;
     final double textScaleFactor = mediaQuery.textScaleFactor;
 
+    // ✅ Select all text automatically after dialog opens
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      textController.selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: textController.text.length,
+      );
+    });
+
     showDialog(
       context: context,
       builder: (ctx) {
         return AlertDialog(
+          backgroundColor: Colors.white, // ✅ White dialog box background
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16 * scaleFactor),
           ),
@@ -1296,7 +1305,7 @@ class _MergeAudioScreenState extends State<MergeAudioScreen> {
                 .size
                 .width * 0.8,
             child: TextField(
-              autofocus: true,
+              autofocus: true, // ✅ Auto focus
               controller: textController,
               maxLength: 20,
               style: TextStyle(fontSize: 16 * scaleFactor * textScaleFactor),
