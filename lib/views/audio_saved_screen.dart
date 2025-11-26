@@ -4,11 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart'; // ✅ NEW IMPORT
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:video_to_audio_converter/views/home_page.dart';
 import '../controllers/audio_controller.dart';
 import '../main.dart';
+// Ensure this points to your actual main file or where OutputScreen is defined
 import '../utils/responsive_helper.dart';
+
+
 
 class AudioSavedScreen extends StatefulWidget {
   final String fileName;
@@ -102,9 +105,7 @@ class _AudioSavedScreenState extends State<AudioSavedScreen> with SingleTickerPr
   @override
   void dispose() {
     _bodyAnimationController.dispose();
-    _bannerAd?.dispose(); // ✅ Dispose banner ad
-    // ✅ DON'T dispose audio player here - let it persist when navigating
-    // Only dispose when explicitly needed (e.g., going home)
+    _bannerAd?.dispose();
     super.dispose();
   }
 
@@ -117,7 +118,7 @@ class _AudioSavedScreenState extends State<AudioSavedScreen> with SingleTickerPr
     return WillPopScope(
       // ✅ Handle back button - don't dispose audio
       onWillPop: () async {
-        return true; // Allow back navigation without disposing
+        return true;
       },
       child: Scaffold(
         appBar: AppBar(
@@ -145,20 +146,8 @@ class _AudioSavedScreenState extends State<AudioSavedScreen> with SingleTickerPr
               ),
             ),
           ),
-          actions: [
-            IconButton(
-              icon: Icon(
-                Icons.home,
-                size: r.fs(26),
-                color: Colors.black,
-              ),
-              onPressed: () {
-                // ✅ Dispose audio only when going home
-                audioController.audioPlayer.dispose();
-                Get.offAll(() => const HomeScreen());
-              },
-            ),
-          ],
+          // ❌ REMOVED ACTIONS (HOME BUTTON) FROM HERE
+          actions: const [],
           toolbarHeight: r.h(60),
         ),
         body: FadeTransition(
@@ -185,6 +174,8 @@ class _AudioSavedScreenState extends State<AudioSavedScreen> with SingleTickerPr
                       r: r,
                     ),
                     SizedBox(height: r.h(30)),
+
+                    // ✅ Updated Action Row with 3 Buttons
                     _ActionButtonsRow(
                       accentColor: accentColor,
                       audioController: audioController,
@@ -192,7 +183,8 @@ class _AudioSavedScreenState extends State<AudioSavedScreen> with SingleTickerPr
                       fileName: widget.fileName,
                       r: r,
                     ),
-                    SizedBox(height: r.h(30)), // Extra space before ad
+
+                    SizedBox(height: r.h(30)),
 
                     // ✅ BANNER AD WIDGET
                     if (_isAdLoaded && _bannerAd != null)
@@ -218,7 +210,7 @@ class _AudioSavedScreenState extends State<AudioSavedScreen> with SingleTickerPr
                       ),
 
                     if (!_isAdLoaded)
-                      SizedBox(height: r.h(60)), // Placeholder for a standard banner size
+                      SizedBox(height: r.h(60)),
                   ],
                 ),
               ),
@@ -244,9 +236,6 @@ class _AudioSavedScreenState extends State<AudioSavedScreen> with SingleTickerPr
     return "$minutes:$seconds";
   }
 }
-
-// ... (Rest of the classes: _AudioInfoCard, _AudioPlayerCard, _PulsatingPlayButton, _ActionButtonsRow, _ActionButtonTile remain unchanged)
-// ... (The rest of the code is omitted for brevity, but you should replace the full file content with the above)
 
 class _AudioInfoCard extends StatelessWidget {
   final Color accentColor;
@@ -546,6 +535,7 @@ class _ActionButtonsRow extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
+        // 1. LOCATION BUTTON
         _ActionButtonTile(
           icon: Icons.folder,
           label: 'Location',
@@ -564,19 +554,36 @@ class _ActionButtonsRow extends StatelessWidget {
               targetTabIndex = 1; // Extracted tab
             } else if (audioPath.contains('/MergedAudio')) {
               targetTabIndex = 2; // Merged tab
-            }
-            else if (audioPath.contains('/Format Converter')) {
+            } else if (audioPath.contains('/Format Converter')) {
               targetTabIndex = 3; // Converted tab
             }
 
-            // Navigate to OutputScreen with the target tab index
+            // Navigate with the target tab index AND hide menu flag
             Get.to(
                   () => OutputScreen(),
               transition: Transition.fade,
-              arguments: targetTabIndex,
+              arguments: {
+                'initialTab': targetTabIndex,
+                'hideMenu': true, // ✅ Hide 3-dot menu
+              },
             );
           },
         ),
+
+        // 2. NEW HOME BUTTON
+        _ActionButtonTile(
+          icon: Icons.home_rounded,
+          label: 'Home',
+          accentColor: accentColor,
+          r: r,
+          onPressed: () {
+            // ✅ Dispose audio and go Home (Logic from old header button)
+            audioController.audioPlayer.dispose();
+            Get.offAll(() => const HomeScreen());
+          },
+        ),
+
+        // 3. SHARE BUTTON
         _ActionButtonTile(
           icon: Icons.share_rounded,
           label: 'Share',
@@ -585,7 +592,6 @@ class _ActionButtonsRow extends StatelessWidget {
           onPressed: () {
             // ✅ Share WITHOUT disposing audio
             shareContent(text: fileName, filePath: audioPath);
-            // Audio keeps playing!
           },
         ),
       ],

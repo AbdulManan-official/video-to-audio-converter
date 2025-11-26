@@ -779,10 +779,13 @@ class _ConversionProgressPageState extends State<ConversionProgressPage> {
                       children: [
                         ElevatedButton.icon(
                           onPressed: () {
-                            // ✅ Navigate to OutputScreen with Converted tab (index 3)
+                            // ✅ Navigate to OutputScreen with Converted tab and hide menu
                             Get.to(
                                   () => OutputScreen(),
-                              arguments: 3, // Open Converted tab
+                              arguments: {
+                                'initialTab': 3, // Open Converted tab
+                                'hideMenu': true, // ✅ NEW: Hide 3-dot menu
+                              },
                             );
                           },
                           style: ElevatedButton.styleFrom(

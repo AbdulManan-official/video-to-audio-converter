@@ -191,16 +191,32 @@ class _OutputScreenState extends State<OutputScreen> {
 
   bool _isSelectionMode = false;
   Set<String> _selectedFiles = {};
+  bool _hideOptionsMenu = false; // ✅ NEW: Flag to hide 3-dot menu
+
 
   @override
   void initState() {
     super.initState();
 
-    // ✅ Check if a specific tab was requested via Get.arguments
-    final int? requestedTab = Get.arguments as int?;
-    if (requestedTab != null && requestedTab >= 0 && requestedTab <= 3) {
-      _selectedTabIndex = requestedTab;
-      log('OutputScreen: Opening with tab index: $_selectedTabIndex');
+    final args = Get.arguments;
+
+    if (args is Map<String, dynamic>) {
+      // New format with both tab and hideMenu
+      final int? requestedTab = args['initialTab'] as int?;
+      if (requestedTab != null && requestedTab >= 0 && requestedTab <= 3) {
+        _selectedTabIndex = requestedTab;
+        log('OutputScreen: Opening with tab index: $_selectedTabIndex');
+      }
+
+      // ✅ Read hideMenu flag
+      _hideOptionsMenu = args['hideMenu'] ?? false;
+      log('OutputScreen: Hide menu: $_hideOptionsMenu');
+    } else if (args is int) {
+      // Old format (just tab index for backward compatibility)
+      if (args >= 0 && args <= 3) {
+        _selectedTabIndex = args;
+        log('OutputScreen: Opening with tab index: $_selectedTabIndex');
+      }
     }
 
     fetchFiles(
@@ -1101,7 +1117,7 @@ class _OutputScreenState extends State<OutputScreen> {
                         ),
                         onPressed: () => _togglePlayPause(file.path, fileName),
                       ),
-                    if (!_isSelectionMode)
+                    if (!_isSelectionMode && !_hideOptionsMenu) // ✅ Only show if hideMenu is false
                       Builder(
                         builder: (BuildContext buttonContext) {
                           return IconButton(
