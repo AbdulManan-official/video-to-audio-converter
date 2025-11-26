@@ -383,7 +383,7 @@ class _FullScreenVideoPlayerState extends State<_FullScreenVideoPlayer> {
 
 // --- FILE NAME INPUT (Responsive) ---
 
-class FileNameInputCard extends StatelessWidget {
+class FileNameInputCard extends StatefulWidget {
   final String initialValue;
   final ValueChanged<String> onChanged;
 
@@ -392,6 +392,37 @@ class FileNameInputCard extends StatelessWidget {
     required this.initialValue,
     required this.onChanged,
   });
+
+  @override
+  State<FileNameInputCard> createState() => _FileNameInputCardState();
+}
+
+class _FileNameInputCardState extends State<FileNameInputCard> {
+  late TextEditingController _textController;
+  final FocusNode _focusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _textController = TextEditingController(text: widget.initialValue);
+
+    // Auto-select text when field gains focus
+    _focusNode.addListener(() {
+      if (_focusNode.hasFocus) {
+        _textController.selection = TextSelection(
+          baseOffset: 0,
+          extentOffset: _textController.text.length,
+        );
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _textController.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -410,8 +441,9 @@ class FileNameInputCard extends StatelessWidget {
         ),
         SizedBox(height: r.h(8)),
         TextFormField(
-          initialValue: initialValue,
-          onChanged: onChanged,
+          controller: _textController,
+          focusNode: _focusNode,
+          onChanged: widget.onChanged,
           style: TextStyle(
             color: primaryDark,
             fontSize: r.fs(15),
