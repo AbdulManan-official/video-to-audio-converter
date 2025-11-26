@@ -779,7 +779,11 @@ class _ConversionProgressPageState extends State<ConversionProgressPage> {
                       children: [
                         ElevatedButton.icon(
                           onPressed: () {
-                            Get.to(() => const OutputScreen());
+                            // ✅ Navigate to OutputScreen with Converted tab (index 3)
+                            Get.to(
+                                  () => OutputScreen(),
+                              arguments: 3, // Open Converted tab
+                            );
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF6C63FF),
@@ -789,10 +793,9 @@ class _ConversionProgressPageState extends State<ConversionProgressPage> {
                             ),
                             elevation: 0,
                           ),
-                          icon: Icon(Icons.folder_open, color: Colors.white,
-                              size: r.w(22)),
+                          icon: Icon(Icons.folder_open, color: Colors.white, size: r.w(22)),
                           label: Text(
-                            'Go To Folder',
+                            'Location',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: r.fs(16),

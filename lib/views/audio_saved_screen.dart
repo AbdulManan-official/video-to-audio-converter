@@ -556,10 +556,26 @@ class _ActionButtonsRow extends StatelessWidget {
             audioController.audioPlayer.stop();
             audioController.isPlaying.value = false;
 
-            // Now navigate
-            Get.to(() => const OutputScreen(), transition: Transition.fade);
-          },
+            // ✅ Determine which tab to open based on audio source
+            int targetTabIndex = 0; // Default to 'All'
 
+            // Check the audio path to determine the source
+            if (audioPath.contains('/VideoMusic')) {
+              targetTabIndex = 1; // Extracted tab
+            } else if (audioPath.contains('/MergedAudio')) {
+              targetTabIndex = 2; // Merged tab
+            }
+            else if (audioPath.contains('/Format Converter')) {
+              targetTabIndex = 3; // Converted tab
+            }
+
+            // Navigate to OutputScreen with the target tab index
+            Get.to(
+                  () => OutputScreen(),
+              transition: Transition.fade,
+              arguments: targetTabIndex,
+            );
+          },
         ),
         _ActionButtonTile(
           icon: Icons.share_rounded,

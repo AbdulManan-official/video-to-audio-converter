@@ -195,6 +195,14 @@ class _OutputScreenState extends State<OutputScreen> {
   @override
   void initState() {
     super.initState();
+
+    // ✅ Check if a specific tab was requested via Get.arguments
+    final int? requestedTab = Get.arguments as int?;
+    if (requestedTab != null && requestedTab >= 0 && requestedTab <= 3) {
+      _selectedTabIndex = requestedTab;
+      log('OutputScreen: Opening with tab index: $_selectedTabIndex');
+    }
+
     fetchFiles(
         directoryPath: '/storage/emulated/0/Music/VideoMusic',
         targetList: videoMusicFiles);
