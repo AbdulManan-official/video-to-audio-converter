@@ -15,6 +15,7 @@ import './utils/waveform_audio_utils.dart';
 import 'dart:developer';
 // import 'package:device_preview/device_preview.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 
 
 
@@ -27,12 +28,18 @@ String trimFileName(String name) {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // ✅ ADD THIS: Lock orientation to portrait
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+
   await _initializePlugins();
   await clearOldFilesOnFirstLaunch();
 
   runApp(const MyApp());
 }
-
 
 Future<void> _initializePlugins() async {
   if (Platform.isAndroid || Platform.isIOS) {
