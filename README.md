@@ -1,139 +1,151 @@
-Video to Audio Converter (Flutter)
+# 🎧 Video to Audio Converter Max (Flutter)
 
-A modern Flutter media converter app that allows you to extract, convert, merge, and manage audio from your videos. Built with FFmpegKit and optimized for modern Android devices, the app combines powerful audio processing with a clean, responsive, and user-friendly interface.
+A modern and powerful **Flutter media converter app** that allows users to extract, convert, merge, and manage audio files directly from their videos. Built using **FFmpegKit**, optimized for Android, and designed with a clean and responsive interface.
 
-🚀 Key Features
-🎬 Video to Audio Conversion
+## 🚀 Features
 
-Convert any video on your device into high-quality audio formats such as MP3, AAC, M4A, WAV, and more.
+### 🎬 Video to Audio Conversion
 
-🔊 Audio Format Conversion
+Convert any video into high-quality audio formats like **MP3, AAC, M4A, WAV**, and more.
 
-Convert audio files between multiple formats with customizable bitrate and quality.
+### 🔊 Audio Format Converter
 
-🎵 Ringtone Maker & Setter
+Convert audio between multiple formats with customizable **bitrate, codec, and quality**.
 
-Trim and set converted audio files as default ringtone, notification tone, or alarm tone directly within the app.
+### 🎵 Ringtone Maker & Setter
 
-🎚️ Merge Audio Files
+Trim audio and set it as:
 
-Combine multiple audio files into a single track using FFmpeg merge commands.
+* Default ringtone
+* Notification tone
+* Alarm tone
 
-📂 Media Picker Support
+### 🎚️ Merge Multiple Audio Files
 
-Pick videos or audio files directly from your gallery or file manager.
+Combine multiple audio tracks into a single file using FFmpeg merge commands.
 
-🧠 Smart Local File Management
+### 📂 Media Picker
 
-All converted, merged, or trimmed files are stored locally with organized naming, sorting, and sharing options.
+Pick videos or audio directly from **Gallery** or **File Manager**.
 
-📱 Modern & Responsive UI
+### 🧠 Smart Local File Management
 
-Fully responsive Flutter UI for all device sizes.
+* Auto-saving converted files
+* Rename, delete, and share
+* Organized sorting
 
-Clean design with progress indicators, animations, and error handling.
+### 📱 Modern UI
 
-🧩 Plugin Integration
+* Responsive design
+* Smooth animations
+* Progress & error handling
 
-ffmpeg_kit_flutter_new – for media conversion
+### 🧩 Plugins Used
 
-permission_handler – for runtime permissions
+* `ffmpeg_kit_flutter_new`
+* `permission_handler`
+* `file_picker`
+* `video_player`
+* `path_provider`
+* `ringtone_set_mul`
 
-file_picker / video_player – for media selection
+## 🛠️ Tech Stack
 
-path_provider – for local storage
+| Component        | Technology                       |
+| ---------------- | -------------------------------- |
+| Framework        | Flutter (Dart)                   |
+| Media Processing | FFmpegKit Flutter                |
+| File Management  | path_provider, file_picker       |
+| UI               | Material Design + Custom Widgets |
+| Platform         | Android (SDK 21+)                |
 
-ringtone_set_mul – for setting ringtones
+## ⚙️ Installation & Setup
 
-🛠️ Tech Stack
-Component	Technology
-Framework	Flutter (Dart)
-Audio/Video Processing	FFmpegKit Flutter
-File Management	path_provider, file_picker
-UI	Material Design, Custom Widgets
-Platform	Android (SDK 21+)
-⚙️ Setup & Installation
+### 1. Clone Repository
 
-Clone the repository
-
+```
 git clone https://github.com/AbdulManan-official/video-to-audio-converter
 cd video-to-audio-converter
+```
 
+### 2. Install Dependencies
 
-Install dependencies
-
+```
 flutter pub get
+```
 
+### 3. Run App
 
-Run in debug mode
-
+```
 flutter run
+```
 
+### 4. Build Release APK
 
-Build release APK
-
+```
 flutter build apk --release
+```
 
+## 📂 Project Structure
 
-⚠️ If using minification, configure proguard-rules.pro to prevent FFmpeg and plugin stripping.
-
-📂 Project Structure
+```
 video_to_audio_converter/
 ├─ lib/
-│  ├─ controllers/       # State management & logic
-│  ├─ models/            # Data models
-│  ├─ utils/             # Helper functions & utilities
-│  ├─ views/             # Screens & UI
-│  │  ├─ Formate Converter/
-│  │  ├─ Merge_Audio/
-│  │  └─ Ringtone/
-│  └─ main.dart          # App entry point
-├─ ios/
+│  ├─ controllers/
+│  ├─ models/
+│  ├─ utils/
+│  ├─ views/
+│  │   ├─ Format_Converter/
+│  │   ├─ Merge_Audio/
+│  │   └─ Ringtone/
+│  └─ main.dart
+├─ plugins/
 ├─ android/
-├─ plugins/              # Custom ringtone plugin
+├─ ios/
 └─ pubspec.yaml
+```
 
-🧩 Core Functionalities Explained
-🎬 Extract Audio from Video
+## 🧩 FFmpeg Commands
 
-FFmpeg command:
+### Extract Audio from Video
 
+```
 -i input_video.mp4 -vn -acodec mp3 output_audio.mp3
+```
 
-🔊 Convert Audio Format
+### Convert Audio Format
+
+```
 -i input.wav -acodec mp3 output.mp3
+```
 
-🎚️ Merge Multiple Audio Files
+### Merge Audio Files
+
+```
 -i "concat:track1.mp3|track2.mp3|track3.mp3" -acodec copy output.mp3
+```
 
-🎵 Set Ringtone
+### Set Ringtone
 
-After conversion:
-
+```
 RingtoneSet.setRingtone(path);
+```
 
-🧠 Permissions Required
+## 🔐 Permissions Required
 
-READ_EXTERNAL_STORAGE
+* READ_EXTERNAL_STORAGE
+* WRITE_EXTERNAL_STORAGE
+* MANAGE_EXTERNAL_STORAGE (Android 11+)
+* SET_RINGTONE
 
-WRITE_EXTERNAL_STORAGE
+## 💡 Future Enhancements
 
-MANAGE_EXTERNAL_STORAGE (Android 11+)
+* Waveform visualizer
+* Playback preview
+* Background conversion
 
-SET_RINGTONE
+## 👤 Author
 
-Handle permissions using permission_handler and declare them in AndroidManifest.xml.
-
-💡 Future Improvements
-
-Waveform visualization during audio trimming
-
-Playback preview before saving
-
-Background conversion tasks
-
-
-
-Abdul Manan
-📍 Sialkot, Pakistan
-📧 abdullmanan7777@gmail.com
+**Abdul Manan**
+Sialkot, Pakistan
+[abdullmanan7777@gmail.com](mailto:abdullmanan7777@gmail.com)
